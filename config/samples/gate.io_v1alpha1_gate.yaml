@@ -1,0 +1,11 @@
+apiVersion: gate.io.gate.io/v1alpha1
+kind: Gate
+metadata:
+  labels:
+    app.kubernetes.io/name: gate-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: gate-sample
+spec:
+  # TODO(user): Add fields here
+  foo: yolo
+

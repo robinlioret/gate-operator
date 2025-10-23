@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- gate.io_v1alpha1_gate.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

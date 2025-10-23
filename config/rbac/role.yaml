@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - gate.io.gate.io
+  resources:
+  - gates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gate.io.gate.io
+  resources:
+  - gates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gate.io.gate.io
+  resources:
+  - gates/status
+  verbs:
+  - get
+  - patch
+  - update
