@@ -17,11 +17,47 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// GateTarget defines how objects should be evaluated to validate the expression
+type GateTarget struct {
+	// Base reference to the object(s) to evaluate. It can match multiple objects in the cluster
+	ObjectRef v1.ObjectReference `json:"objectRef"`
+
+	// Select objects among the one matching the objectRef field using the labels
+	// +optional
+	// +kubebuilder:default:value=nil
+	Selector metav1.LabelSelector `json:"selector,omitempty"`
+}
+
+// GateExpression defines the conditions for the gate to be available
+type GateExpression struct {
+	// Target to evaluate
+	// +optional
+	// +kubebuilder:default:value=nil
+	Target GateTarget `json:"target,omitempty"`
+
+	// If true, inverts the result of the target
+	// +optional
+	// +kubebuilder:default:value=false
+	// +kubebuilder:example=true
+	Invert bool `json:"invert,omitempty"`
+
+	// Apply AND logical operator to the expressions
+	// +optional
+	// +kubebuilder:default:value=nil
+	And []GateExpression `json:"and,omitempty"`
+
+	// Apply AND logical operator to the expressions
+	// +optional
+	// +kubebuilder:default:value=nil
+	Or []GateExpression `json:"or,omitempty"`
+}
 
 // GateSpec defines the desired state of Gate
 type GateSpec struct {
@@ -30,9 +66,8 @@ type GateSpec struct {
 	// The following markers will use OpenAPI v3 schema to validate the value
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
-	// foo is an example field of Gate. Edit gate_types.go to remove/update
-	// +optional
-	Foo *string `json:"foo,omitempty"`
+	// The set of conditions to make the Gate available
+	Expression GateExpression `json:"expression,omitempty"`
 }
 
 // GateStatus defines the observed state of Gate.

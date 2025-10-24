@@ -1,4 +1,4 @@
-apiVersion: gate.io.gate.io/v1alpha1
+apiVersion: gate.sh/v1alpha1
 kind: Gate
 metadata:
   labels:
@@ -7,5 +7,3 @@ metadata:
   name: gate-sample
 spec:
   # TODO(user): Add fields here
-  foo: yolo
-

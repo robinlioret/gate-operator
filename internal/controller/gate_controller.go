@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	gateiov1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 )
 
 // GateReconciler reconciles a Gate object
@@ -33,9 +33,9 @@ type GateReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=gate.io.gate.io,resources=gates,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=gate.io.gate.io,resources=gates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=gate.io.gate.io,resources=gates/finalizers,verbs=update
+// +kubebuilder:rbac:groups=gate.sh,resources=gates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=gate.sh,resources=gates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=gate.sh,resources=gates/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -57,7 +57,7 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // SetupWithManager sets up the controller with the Manager.
 func (r *GateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&gateiov1alpha1.Gate{}).
+		For(&gateshv1alpha1.Gate{}).
 		Named("gate").
 		Complete(r)
 }

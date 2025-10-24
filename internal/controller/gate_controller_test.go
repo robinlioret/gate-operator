@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gateiov1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 )
 
 var _ = Describe("Gate Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("Gate Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		gate := &gateiov1alpha1.Gate{}
+		gate := &gateshv1alpha1.Gate{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Gate")
 			err := k8sClient.Get(ctx, typeNamespacedName, gate)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &gateiov1alpha1.Gate{
+				resource := &gateshv1alpha1.Gate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("Gate Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &gateiov1alpha1.Gate{}
+			resource := &gateshv1alpha1.Gate{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

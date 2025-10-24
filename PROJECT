@@ -3,7 +3,7 @@
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
 cliVersion: (devel)
-domain: gate.io
+domain: gate.sh
 layout:
 - go.kubebuilder.io/v4
 projectName: gate-operator
@@ -13,8 +13,7 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: gate.io
-  group: gate.io
+  domain: gate.sh
   kind: Gate
   path: github.com/robinlioret/gate-operator/api/v1alpha1
   version: v1alpha1
