@@ -158,7 +158,7 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-validations:
-                - message: At least one of 'object', 'and', 'or' must be specified
+                - message: At least one of 'target', 'and', 'or' must be specified
                   rule: has(self.target) || has(self.and) || has(self.or)
             type: object
           status:
