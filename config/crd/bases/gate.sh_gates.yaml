@@ -52,6 +52,11 @@ spec:
                     description: If true, inverts the result of the target
                     example: true
                     type: boolean
+                  or:
+                    default: nil
+                    description: Apply AND logical operator to the expressions
+                    items: {}
+                    type: array
                   target:
                     default: nil
                     description: Target to evaluate
@@ -152,6 +157,9 @@ spec:
                     - objectRef
                     type: object
                 type: object
+                x-kubernetes-validations:
+                - message: At least one of 'object', 'and', 'or' must be specified
+                  rule: has(self.target) || has(self.and) || has(self.or)
             type: object
           status:
             description: status defines the observed state of Gate

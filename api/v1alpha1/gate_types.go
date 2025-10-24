@@ -30,31 +30,32 @@ type GateTarget struct {
 	ObjectRef v1.ObjectReference `json:"objectRef"`
 
 	// Select objects among the one matching the objectRef field using the labels
-	// +optional
+	// ++kubebuilder:validation:Optional
 	// +kubebuilder:default:value=nil
 	Selector metav1.LabelSelector `json:"selector,omitempty"`
 }
 
 // GateExpression defines the conditions for the gate to be available
+// +kubebuilder:validation:XValidation:rule="has(self.target) || has(self.and) || has(self.or)",message="At least one of 'object', 'and', 'or' must be specified"
 type GateExpression struct {
 	// Target to evaluate
-	// +optional
+	// ++kubebuilder:validation:Optional
 	// +kubebuilder:default:value=nil
 	Target GateTarget `json:"target,omitempty"`
 
 	// If true, inverts the result of the target
-	// +optional
+	// ++kubebuilder:validation:Optional
 	// +kubebuilder:default:value=false
 	// +kubebuilder:example=true
 	Invert bool `json:"invert,omitempty"`
 
 	// Apply AND logical operator to the expressions
-	// +optional
+	// ++kubebuilder:validation:Optional
 	// +kubebuilder:default:value=nil
 	And []GateExpression `json:"and,omitempty"`
 
 	// Apply AND logical operator to the expressions
-	// +optional
+	// ++kubebuilder:validation:Optional
 	// +kubebuilder:default:value=nil
 	Or []GateExpression `json:"or,omitempty"`
 }
