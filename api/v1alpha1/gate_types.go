@@ -27,11 +27,11 @@ import (
 // GateTarget defines how objects should be evaluated to validate the expression
 type GateTarget struct {
 	// Base reference to the object(s) to evaluate. It can match multiple objects in the cluster
+	// +required
 	ObjectRef v1.ObjectReference `json:"objectRef"`
 
 	// Select objects among the one matching the objectRef field using the labels
 	// +optional
-	// +kubebuilder:default:value=nil
 	Selector metav1.LabelSelector `json:"selector,omitempty"`
 }
 
@@ -40,24 +40,23 @@ type GateTarget struct {
 type GateExpression struct {
 	// Target to evaluate
 	// +optional
-	// +kubebuilder:default:value=nil
 	Target GateTarget `json:"target,omitempty"`
 
 	// If true, inverts the result of the target
 	// +optional
-	// +kubebuilder:default:value=false
-	// +kubebuilder:example=true
 	Invert bool `json:"invert,omitempty"`
 
 	// Apply AND logical operator to the expressions
 	// +optional
-	// +kubebuilder:default:value=nil
-	And []GateExpression `json:"and,omitempty"`
+	And []*GateExpressionWrap `json:"and,omitempty"`
 
 	// Apply AND logical operator to the expressions
 	// +optional
-	// +kubebuilder:default:value=nil
-	Or []GateExpression `json:"or,omitempty"`
+	Or []*GateExpressionWrap `json:"or,omitempty"`
+}
+
+type GateExpressionWrap struct {
+	GateExpression `json:",inline"`
 }
 
 // GateSpec defines the desired state of Gate
@@ -68,7 +67,8 @@ type GateSpec struct {
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
 	// The set of conditions to make the Gate available
-	Expression GateExpression `json:"expression,omitempty"`
+	// +required
+	Expression GateExpression `json:"expression"`
 }
 
 // GateStatus defines the observed state of Gate.

@@ -43,22 +43,19 @@ spec:
                 description: The set of conditions to make the Gate available
                 properties:
                   and:
-                    default: nil
                     description: Apply AND logical operator to the expressions
-                    items: {}
+                    items:
+                      type: object
                     type: array
                   invert:
-                    default: false
                     description: If true, inverts the result of the target
-                    example: true
                     type: boolean
                   or:
-                    default: nil
                     description: Apply AND logical operator to the expressions
-                    items: {}
+                    items:
+                      type: object
                     type: array
                   target:
-                    default: nil
                     description: Target to evaluate
                     properties:
                       objectRef:
@@ -106,7 +103,6 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       selector:
-                        default: nil
                         description: Select objects among the one matching the objectRef
                           field using the labels
                         properties:
@@ -160,6 +156,8 @@ spec:
                 x-kubernetes-validations:
                 - message: At least one of 'target', 'and', 'or' must be specified
                   rule: has(self.target) || has(self.and) || has(self.or)
+            required:
+            - expression
             type: object
           status:
             description: status defines the observed state of Gate
