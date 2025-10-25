@@ -156,6 +156,9 @@ spec:
                 x-kubernetes-validations:
                 - message: At least one of 'target', 'and', 'or' must be specified
                   rule: has(self.target) || has(self.and) || has(self.or)
+              requeueAfter:
+                description: Defines the duration between evaluations of a Gate
+                type: string
             required:
             - expression
             type: object
@@ -231,6 +234,11 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastSuccessfulEvaluation:
+                description: lastSuccessfulEvaluation defines when was the last time
+                  the gate was successfully evaluated.
+                format: date-time
+                type: string
             type: object
         required:
         - spec

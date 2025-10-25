@@ -69,6 +69,10 @@ type GateSpec struct {
 	// The set of conditions to make the Gate available
 	// +required
 	Expression GateExpression `json:"expression"`
+
+	// Defines the duration between evaluations of a Gate
+	// +optional
+	RequeueAfter *metav1.Duration `json:"requeueAfter,omitempty"`
 }
 
 // GateStatus defines the observed state of Gate.
@@ -92,6 +96,10 @@ type GateStatus struct {
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// lastSuccessfulEvaluation defines when was the last time the gate was successfully evaluated.
+	// +optional
+	LastSuccessfulEvaluation *metav1.Time `json:"lastSuccessfulEvaluation,omitempty"`
 }
 
 // +kubebuilder:object:root=true
