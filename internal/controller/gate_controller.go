@@ -96,7 +96,8 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, nil
+	//return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, nil
+	return ctrl.Result{RequeueAfter: GateRequeueAfterSeconds * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
