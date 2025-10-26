@@ -36,7 +36,7 @@ type GateTarget struct {
 }
 
 // GateExpression defines the conditions for the gate to be available
-// +kubebuilder:validation:XValidation:rule="has(self.target) || has(self.and) || has(self.or)",message="At least one of 'target', 'and', 'or' must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.target) ? 1 : 0) + (has(self.and) ? 1 : 0) + (has(self.or) ? 1 : 0) == 1",message="Exactly one of 'target', 'and', or 'or' must be specified"
 type GateExpression struct {
 	// Target to evaluate
 	// +optional

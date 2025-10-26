@@ -154,8 +154,9 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-validations:
-                - message: At least one of 'target', 'and', 'or' must be specified
-                  rule: has(self.target) || has(self.and) || has(self.or)
+                - message: Exactly one of 'target', 'and', or 'or' must be specified
+                  rule: '(has(self.target) ? 1 : 0) + (has(self.and) ? 1 : 0) + (has(self.or)
+                    ? 1 : 0) == 1'
               requeueAfter:
                 description: Defines the duration between evaluations of a Gate
                 type: string

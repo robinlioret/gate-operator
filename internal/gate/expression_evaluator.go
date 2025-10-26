@@ -15,8 +15,70 @@ limitations under the License.
 */
 package gate
 
-import gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+import (
+	"slices"
+
+	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+)
 
 func Evaluate(spec gateshv1alpha1.GateSpec) (bool, error) {
+	return evaluateExpression(spec.Expression)
+}
+
+func evaluateExpression(expression gateshv1alpha1.GateExpression) (bool, error) {
+	var result bool
+	var err error
+
+	if expression.Or != nil {
+		subResults, err := evaluateChildrenExpressions(expression.Or)
+		if err != nil {
+			return false, err
+		}
+		result = slices.Contains(subResults, true)
+	}
+
+	if expression.And != nil {
+		subResults, err := evaluateChildrenExpressions(expression.And)
+		if err != nil {
+			return false, err
+		}
+		for _, r := range subResults {
+			if !r {
+				result = false
+				break
+			}
+		}
+	}
+
+	if isTargetValid(expression.Target) {
+		result, err = evaluateTarget(expression.Target)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if expression.Invert == true {
+		result = !result
+	}
+	return result, nil
+}
+
+func evaluateChildrenExpressions(expressions []*gateshv1alpha1.GateExpressionWrap) ([]bool, error) {
+	var results []bool
+	for _, sub := range expressions {
+		r, err := evaluateExpression(sub.GateExpression)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+func isTargetValid(target gateshv1alpha1.GateTarget) bool {
+	return target.ObjectRef.Kind != ""
+}
+
+func evaluateTarget(target gateshv1alpha1.GateTarget) (bool, error) {
 	return true, nil
 }
