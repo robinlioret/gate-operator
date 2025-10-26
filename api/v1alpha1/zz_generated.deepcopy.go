@@ -169,8 +169,8 @@ func (in *GateStatus) DeepCopyInto(out *GateStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.LastSuccessfulEvaluation != nil {
-		in, out := &in.LastSuccessfulEvaluation, &out.LastSuccessfulEvaluation
+	if in.LastEvaluation != nil {
+		in, out := &in.LastEvaluation, &out.LastEvaluation
 		*out = (*in).DeepCopy()
 	}
 }

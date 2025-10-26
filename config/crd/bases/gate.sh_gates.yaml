@@ -234,7 +234,7 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              lastSuccessfulEvaluation:
+              lastEvaluation:
                 description: lastSuccessfulEvaluation defines when was the last time
                   the gate was successfully evaluated.
                 format: date-time

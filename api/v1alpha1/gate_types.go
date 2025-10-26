@@ -99,7 +99,7 @@ type GateStatus struct {
 
 	// lastSuccessfulEvaluation defines when was the last time the gate was successfully evaluated.
 	// +optional
-	LastSuccessfulEvaluation *metav1.Time `json:"lastSuccessfulEvaluation,omitempty"`
+	LastEvaluation *metav1.Time `json:"lastEvaluation,omitempty"`
 }
 
 // +kubebuilder:object:root=true

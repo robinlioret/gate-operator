@@ -12,3 +12,4 @@ spec:
         kind: Deployment
         name: coredns
         namespace: kube-system
+  requeueAfter: 10s
