@@ -57,20 +57,20 @@ func evaluateExpression(expression gateshv1alpha1.GateExpression) (bool, error) 
 		}
 	}
 
-	if expression.Invert == true {
+	if expression.Invert {
 		result = !result
 	}
 	return result, nil
 }
 
 func evaluateChildrenExpressions(expressions []*gateshv1alpha1.GateExpressionWrap) ([]bool, error) {
-	var results []bool
-	for _, sub := range expressions {
+	var results = make([]bool, len(expressions))
+	for i, sub := range expressions {
 		r, err := evaluateExpression(sub.GateExpression)
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, r)
+		results[i] = r
 	}
 	return results, nil
 }
