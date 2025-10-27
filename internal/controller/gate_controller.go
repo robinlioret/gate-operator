@@ -69,7 +69,8 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Evaluate the expression
-	result, err := expreval.Evaluate(gate.Spec)
+	evaluator := expreval.NewExpressionEvaluator(ctx, r.Client)
+	result, err := evaluator.Evaluate(gate.Spec)
 	if err != nil {
 		log.Error(err, "failed to evaluate Gate")
 		return ctrl.Result{}, err

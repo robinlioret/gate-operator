@@ -16,42 +16,66 @@ limitations under the License.
 package gate
 
 import (
-	"slices"
+	"context"
 
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func Evaluate(spec gateshv1alpha1.GateSpec) (bool, error) {
-	return evaluateExpression(spec.Expression)
+type ExpressionEvaluator struct {
+	client.Client
+	context.Context
 }
 
-func evaluateExpression(expression gateshv1alpha1.GateExpression) (bool, error) {
+func NewExpressionEvaluator(ctx context.Context, c client.Client) *ExpressionEvaluator {
+	return &ExpressionEvaluator{
+		Client:  c,
+		Context: ctx,
+	}
+}
+
+func (e *ExpressionEvaluator) Evaluate(gateSpec gateshv1alpha1.GateSpec) (bool, error) {
+	result, err := e.evaluateExpression(gateSpec.Expression)
+	if err != nil {
+		return false, err
+	}
+	return result, nil
+}
+
+func (e *ExpressionEvaluator) evaluateExpression(expression gateshv1alpha1.GateExpression) (bool, error) {
 	var result bool
 	var err error
 
 	if expression.Or != nil {
-		subResults, err := evaluateChildrenExpressions(expression.Or)
-		if err != nil {
-			return false, err
+		result = false
+		for _, subExpression := range expression.Or {
+			subResult, err := e.evaluateExpression(subExpression.GateExpression)
+			if err != nil {
+				return false, err
+			}
+			if subResult {
+				result = true
+				break
+			}
 		}
-		result = slices.Contains(subResults, true)
 	}
 
 	if expression.And != nil {
-		subResults, err := evaluateChildrenExpressions(expression.And)
-		if err != nil {
-			return false, err
-		}
-		for _, r := range subResults {
-			if !r {
+		result = true
+		for _, subExpression := range expression.And {
+			subResult, err := e.evaluateExpression(subExpression.GateExpression)
+			if err != nil {
+				return false, err
+			}
+			if !subResult {
 				result = false
 				break
 			}
 		}
 	}
 
-	if isTargetValid(expression.Target) {
-		result, err = evaluateTarget(expression.Target)
+	if isValidTarget(expression.Target) {
+		result, err = e.evaluateTarget(expression.Target)
 		if err != nil {
 			return false, err
 		}
@@ -60,25 +84,14 @@ func evaluateExpression(expression gateshv1alpha1.GateExpression) (bool, error) 
 	if expression.Invert {
 		result = !result
 	}
+
 	return result, nil
 }
 
-func evaluateChildrenExpressions(expressions []*gateshv1alpha1.GateExpressionWrap) ([]bool, error) {
-	var results = make([]bool, len(expressions))
-	for i, sub := range expressions {
-		r, err := evaluateExpression(sub.GateExpression)
-		if err != nil {
-			return nil, err
-		}
-		results[i] = r
-	}
-	return results, nil
-}
-
-func isTargetValid(target gateshv1alpha1.GateTarget) bool {
+func isValidTarget(target gateshv1alpha1.GateTarget) bool {
 	return target.ObjectRef.Kind != ""
 }
 
-func evaluateTarget(target gateshv1alpha1.GateTarget) (bool, error) {
+func (e *ExpressionEvaluator) evaluateTarget(target gateshv1alpha1.GateTarget) (bool, error) {
 	return true, nil
 }
