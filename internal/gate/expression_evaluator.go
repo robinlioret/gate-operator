@@ -93,5 +93,6 @@ func isValidTarget(target gateshv1alpha1.GateTarget) bool {
 }
 
 func (e *ExpressionEvaluator) evaluateTarget(target gateshv1alpha1.GateTarget) (bool, error) {
+
 	return true, nil
 }
