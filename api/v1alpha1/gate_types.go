@@ -17,16 +17,31 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type GateOperator = string
+
+const (
+	And GateOperator = "And"
+	Or  GateOperator = "Or"
+)
+
+type GateOperation struct {
+	// Operation to perform. By default, it is "And".
+	// +default:value="And"
+	// +kubebuilder:validation:Enum=And;Or
+	Operator GateOperator `json:"operator,omitempty"`
+
+	// TODO: add threshold, and other operations possibilties
+}
+
 type GateTargetCondition struct {
 	// Type of the kubernetes conditions.
-	// +default:value="Ready"
+	// +default:value="Available"
 	Type string `json:"type"`
 
 	// Type of the kubernetes conditions.
@@ -34,39 +49,41 @@ type GateTargetCondition struct {
 	Status metav1.ConditionStatus `json:"status"`
 }
 
-// GateTargetOne defines what object and how it should be evaluated to validate the expression
-type GateTargetOne struct {
-	// Base reference to the object(s) to evaluate. It can match multiple objects in the cluster
-	// +required
-	ObjectRef corev1.ObjectReference `json:"objectRef"`
-
-	// Conditions criteria
-	// +optional
-	Condition GateTargetCondition `json:"condition,omitempty"`
-}
-
 // GateExpression defines the conditions for the gate to be available
-// +kubebuilder:validation:XValidation:rule="(has(self.targetOne) ? 1 : 0) + (has(self.and) ? 1 : 0) + (has(self.or) ? 1 : 0) == 1",message="Exactly one of 'targetOne', 'and', or 'or' must be specified"
-type GateExpression struct {
-	// Target to evaluate
-	// +optional
-	TargetOne GateTargetOne `json:"targetOne,omitempty"`
+// +kubebuilder:validation:XValidation:rule="((has(self.name) ? 1 : 0) + (has(self.labelSelector) ? 1 : 0)) == 1",message="Exactly one of 'name' or 'labelSelector' must be specified"
+type GateTarget struct {
+	// Kind of the resource(s) to target
+	// +required
+	Kind string `json:"kind"`
 
-	// If true, inverts the result of the target
-	// +optional
-	Invert bool `json:"invert,omitempty"`
+	// ApiVersion of the resource(s) to target
+	// +required
+	ApiVersion string `json:"apiVersion"`
 
-	// Apply AND logical operator to the expressions
+	// Namespace of the resource(s) to target. By default, the namespace of the gate.
 	// +optional
-	And []*GateExpressionWrap `json:"and,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 
-	// Apply AND logical operator to the expressions
+	// Name of the resource to target. Incompatible with label selection.
 	// +optional
-	Or []*GateExpressionWrap `json:"or,omitempty"`
-}
+	Name string `json:"name,omitempty"`
 
-type GateExpressionWrap struct {
-	GateExpression `json:",inline"`
+	// Select the resources using labels. Incompatible with name selection.
+	// +optional
+	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+
+	// If true, the target will be validated if the resources is found regardless of its condition.
+	// If true and using labels selection, this will validate the target if at least one resource is found.
+	// By default, false.
+	// +optional
+	// +default:value=false
+	ExistsOnly bool `json:"existsOnly,omitempty"`
+
+	// DesiredCondition of the resources. By default, will look for Available to be "True".
+	// +optional
+	DesiredCondition GateTargetCondition `json:"desiredCondition,omitempty"`
+
+	// TODO: add threshold, and other operations possibilties
 }
 
 // GateSpec defines the desired state of Gate
@@ -76,12 +93,17 @@ type GateSpec struct {
 	// The following markers will use OpenAPI v3 schema to validate the value
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
-	// The set of conditions to make the Gate available
+	// The set of conditions to make the Gate ready.
 	// +required
-	Expression GateExpression `json:"expression"`
+	Targets []GateTarget `json:"targets"`
 
-	// Defines the duration between evaluations of a Gate
+	// Indicates how to combine the targets results. By default, they will simply be anded.
 	// +optional
+	Operation GateOperation `json:"operation"`
+
+	// Defines the duration between evaluations of a Gate. By default, 60 seconds
+	// +optional
+	// +default:value="60s"
 	RequeueAfter *metav1.Duration `json:"requeueAfter,omitempty"`
 }
 
@@ -121,7 +143,6 @@ type GateStatus struct {
 
 // Gate is the Schema for the gates API
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=`.status.state`
-// +kubebuilder:printcolumn:name="LastEval",type="date",JSONPath=`.status.lastEvaluation`
 type Gate struct {
 	metav1.TypeMeta `json:",inline"`
 

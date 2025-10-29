@@ -20,9 +20,6 @@ import (
 	"context"
 	"time"
 
-	expreval "github.com/robinlioret/gate-operator/internal/gate"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,42 +66,6 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	// Evaluate the expression
-	evaluator := expreval.NewExpressionEvaluator(ctx, r.Client, gate.Namespace)
-	result, err := evaluator.Evaluate(gate.Spec)
-	if err != nil {
-		log.Error(err, "failed to evaluate Gate")
-		return ctrl.Result{}, err
-	}
-
-	// Process the result and update the gate's status
-	if result {
-		log.Info("Gate is evaluated to true")
-		meta.SetStatusCondition(&gate.Status.Conditions, metav1.Condition{
-			Type:    "Ready",
-			Status:  "True",
-			Reason:  "GateEvaluatedTrue",
-			Message: "Gate was evaluated to true",
-		})
-		meta.RemoveStatusCondition(&gate.Status.Conditions, "Progressing")
-		gate.Status.State = "Ready"
-	} else {
-		log.Info("Gate is evaluated to false")
-		meta.SetStatusCondition(&gate.Status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  "True",
-			Reason:  "GateEvaluatedTrue",
-			Message: "Gate was evaluated to true",
-		})
-		meta.RemoveStatusCondition(&gate.Status.Conditions, "Ready")
-		gate.Status.State = "Progressing"
-	}
-
-	gate.Status.LastEvaluation = &metav1.Time{Time: time.Now()}
-	if err := r.Status().Update(ctx, &gate); err != nil {
-		log.Error(err, "failed to update Gate")
-		return ctrl.Result{}, err
-	}
 	return ctrl.Result{RequeueAfter: r.GetRequeueAfter(gate)}, nil
 }
 
