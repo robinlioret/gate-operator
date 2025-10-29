@@ -1,0 +1,49 @@
+site_name: Gate Operator
+site_author: Robin LIORET
+site_url: https://robinlioret.github.io/gate-operator
+
+copyright: >
+  Copyright &copy; 2025 Robin LIORET – <a href="#__consent">Change cookie settings</a>
+
+theme:
+  name: material
+  language: en
+  palette:
+    primary: purple
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.prune
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - search.share
+    - toc.follow
+    #    - toc.integrate
+    #    - header.autohide
+    - announce.dismiss
+    - content.code.annotate
+    - content.code.copy
+    - content.footnote.tooltips
+    - content.tooltips
+    - content.action.edit
+    - content.action.view
+
+extra:
+  consent: # https://squidfunk.github.io/mkdocs-material/setup/ensuring-data-privacy/#cookie-consent
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+    actions:
+      - accept
+      - reject
