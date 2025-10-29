@@ -4,7 +4,7 @@ controllerManager:
   container:
     image:
       repository: ghcr.io/robinlioret/gate-operator
-      tag: 0.0.1-rc1
+      tag: 0.0.1-rc2
     imagePullPolicy: IfNotPresent
     args:
       - "--leader-elect"
