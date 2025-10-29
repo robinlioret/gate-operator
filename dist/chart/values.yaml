@@ -75,3 +75,7 @@ certmanager:
 # [NETWORK POLICIES]: To enable NetworkPolicies set true
 networkPolicy:
   enable: false
+
+# [WEBHOOK]: To enable webhook
+webhook:
+  enabled: false
