@@ -26,8 +26,8 @@ import (
 type GateOperator = string
 
 const (
-	And GateOperator = "And"
-	Or  GateOperator = "Or"
+	GateOperatorAnd GateOperator = "And"
+	GateOperatorOr  GateOperator = "Or"
 )
 
 type GateOperation struct {
@@ -50,7 +50,6 @@ type GateTargetCondition struct {
 }
 
 // GateExpression defines the conditions for the gate to be available
-// +kubebuilder:validation:XValidation:rule="((has(self.name) ? 1 : 0) + (has(self.labelSelector) ? 1 : 0)) == 1",message="Exactly one of 'name' or 'labelSelector' must be specified"
 type GateTarget struct {
 	// Kind of the resource(s) to target
 	// +required
@@ -107,6 +106,13 @@ type GateSpec struct {
 	RequeueAfter *metav1.Duration `json:"requeueAfter,omitempty"`
 }
 
+type GateState = string
+
+const (
+	GateStateOpened GateState = "Opened"
+	GateStateClosed GateState = "Closed"
+)
+
 // GateStatus defines the observed state of Gate.
 type GateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -131,7 +137,7 @@ type GateStatus struct {
 
 	// lastSuccessfulEvaluation defines when was the last time the gate was successfully evaluated.
 	// +optional
-	LastEvaluation *metav1.Time `json:"lastEvaluation,omitempty"`
+	NextEvaluation metav1.Time `json:"nextEvaluation,omitempty"`
 
 	// Easy access field representing the gate's condition
 	// +optional
