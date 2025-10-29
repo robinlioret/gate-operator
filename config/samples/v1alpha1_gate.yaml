@@ -7,10 +7,9 @@ metadata:
   name: gate-sample
 spec:
   expression:
-    and:
-      - targetOne:
-          objectRef:
-            kind: Deployment
-            name: coredns
-            namespace: kube-system
+    targetOne:
+      objectRef:
+        kind: Deployment
+        name: coredns
+        namespace: kube-system
   requeueAfter: 10s

@@ -94,6 +94,8 @@ func isValidTarget(target gateshv1alpha1.GateTargetOne) bool {
 	return target.ObjectRef.Kind != ""
 }
 
+const TargetConditionTypeNone = "__none__"
+
 func (e *ExpressionEvaluator) evaluateTarget(target gateshv1alpha1.GateTargetOne) (bool, error) {
 	obj, err := internal.GetReferencedObject(e.Context, e.Client, &target.ObjectRef, "default")
 	if errors.IsNotFound(err) {
@@ -102,5 +104,19 @@ func (e *ExpressionEvaluator) evaluateTarget(target gateshv1alpha1.GateTargetOne
 		return false, err
 	}
 
+	if target.Condition.Type != TargetConditionTypeNone {
+		conditions, err := internal.GetObjectStatusConditions(obj)
+		if err != nil {
+			return false, err
+		}
+		for _, condition := range conditions {
+			if condition.Type == target.Condition.Type {
+				return condition.Status == target.Condition.Status, nil
+			}
+		}
+		return false, nil
+	}
+
+	// When only testing the presence of the object
 	return true, nil
 }

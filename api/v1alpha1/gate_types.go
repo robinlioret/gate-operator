@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,15 +30,15 @@ type GateTargetCondition struct {
 	Type string `json:"type"`
 
 	// Type of the kubernetes conditions.
-	// +default:value="true"
-	Value string `json:"value"`
+	// +default:value="True"
+	Status metav1.ConditionStatus `json:"status"`
 }
 
 // GateTargetOne defines what object and how it should be evaluated to validate the expression
 type GateTargetOne struct {
 	// Base reference to the object(s) to evaluate. It can match multiple objects in the cluster
 	// +required
-	ObjectRef v1.ObjectReference `json:"objectRef"`
+	ObjectRef corev1.ObjectReference `json:"objectRef"`
 
 	// Conditions criteria
 	// +optional
@@ -110,12 +110,18 @@ type GateStatus struct {
 	// lastSuccessfulEvaluation defines when was the last time the gate was successfully evaluated.
 	// +optional
 	LastEvaluation *metav1.Time `json:"lastEvaluation,omitempty"`
+
+	// Easy access field representing the gate's condition
+	// +optional
+	State string `json:"state,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
 // Gate is the Schema for the gates API
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=`.status.state`
+// +kubebuilder:printcolumn:name="Last Evaluation",type="date",JSONPath=`.status.lastEvaluation`
 type Gate struct {
 	metav1.TypeMeta `json:",inline"`
 

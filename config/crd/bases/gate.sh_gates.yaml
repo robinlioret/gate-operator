@@ -14,7 +14,14 @@ spec:
     singular: gate
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .status.lastEvaluation
+      name: Last Evaluation
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Gate is the Schema for the gates API
@@ -61,17 +68,17 @@ spec:
                       condition:
                         description: Conditions criteria
                         properties:
+                          status:
+                            default: "True"
+                            description: Type of the kubernetes conditions.
+                            type: string
                           type:
                             default: Ready
                             description: Type of the kubernetes conditions.
                             type: string
-                          value:
-                            default: "true"
-                            description: Type of the kubernetes conditions.
-                            type: string
                         required:
+                        - status
                         - type
-                        - value
                         type: object
                       objectRef:
                         description: Base reference to the object(s) to evaluate.
@@ -207,6 +214,9 @@ spec:
                 description: lastSuccessfulEvaluation defines when was the last time
                   the gate was successfully evaluated.
                 format: date-time
+                type: string
+              state:
+                description: Easy access field representing the gate's condition
                 type: string
             type: object
         required:

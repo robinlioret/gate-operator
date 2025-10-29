@@ -86,6 +86,7 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			Message: "Gate was evaluated to true",
 		})
 		meta.RemoveStatusCondition(&gate.Status.Conditions, "Progressing")
+		gate.Status.State = "Ready"
 	} else {
 		log.Info("Gate is evaluated to false")
 		meta.SetStatusCondition(&gate.Status.Conditions, metav1.Condition{
@@ -95,6 +96,7 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			Message: "Gate was evaluated to true",
 		})
 		meta.RemoveStatusCondition(&gate.Status.Conditions, "Ready")
+		gate.Status.State = "Progressing"
 	}
 
 	gate.Status.LastEvaluation = &metav1.Time{Time: time.Now()}
