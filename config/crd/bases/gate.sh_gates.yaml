@@ -19,7 +19,7 @@ spec:
       name: State
       type: string
     - jsonPath: .status.lastEvaluation
-      name: Last Evaluation
+      name: LastEval
       type: date
     name: v1alpha1
     schema:

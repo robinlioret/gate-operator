@@ -121,7 +121,7 @@ type GateStatus struct {
 
 // Gate is the Schema for the gates API
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=`.status.state`
-// +kubebuilder:printcolumn:name="Last Evaluation",type="date",JSONPath=`.status.lastEvaluation`
+// +kubebuilder:printcolumn:name="LastEval",type="date",JSONPath=`.status.lastEvaluation`
 type Gate struct {
 	metav1.TypeMeta `json:",inline"`
 

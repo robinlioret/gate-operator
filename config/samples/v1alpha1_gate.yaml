@@ -9,7 +9,11 @@ spec:
   expression:
     targetOne:
       objectRef:
+        apiVersion: apps/v1
         kind: Deployment
         name: coredns
         namespace: kube-system
+      condition:
+        type: Available
+        status: "True"
   requeueAfter: 10s
