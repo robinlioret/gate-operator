@@ -154,10 +154,6 @@ spec:
                   - apiVersion
                   - kind
                   type: object
-                  x-kubernetes-validations:
-                  - message: Exactly one of 'name' or 'labelSelector' must be specified
-                    rule: '((has(self.name) ? 1 : 0) + (has(self.labelSelector) ?
-                      1 : 0)) == 1'
                 type: array
             required:
             - targets
@@ -234,7 +230,7 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              lastEvaluation:
+              nextEvaluation:
                 description: lastSuccessfulEvaluation defines when was the last time
                   the gate was successfully evaluated.
                 format: date-time

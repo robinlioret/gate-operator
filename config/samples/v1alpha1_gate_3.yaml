@@ -4,17 +4,14 @@ metadata:
   labels:
     app.kubernetes.io/name: gate-operator
     app.kubernetes.io/managed-by: kustomize
-  name: gate-sample-2
+  name: gate-sample-3
 spec:
   requeueAfter: 10s
   targets:
     - apiVersion: apps/v1
       kind: Deployment
-      labelSelector:
-        matchLabels:
-          my-label: imma-gate
+      namespace: kube-system
+      name: coredns
       desiredCondition:
-        type: "Ready"
+        type: "Available"
         status: "True"
-  operation:
-    operator: Or
