@@ -519,7 +519,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: ghcr.io/robinlioret/gate-operator:0.0.1-rc1
+        image: ghcr.io/robinlioret/gate-operator:0.0.1-rc2
         livenessProbe:
           httpGet:
             path: /healthz
