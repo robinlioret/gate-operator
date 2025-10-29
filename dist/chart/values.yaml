@@ -3,8 +3,8 @@ controllerManager:
   replicas: 1
   container:
     image:
-      repository: controller
-      tag: latest
+      repository: docker pull ghcr.io/robinlioret/gate-operator
+      tag: 0.0.1-rc1
     imagePullPolicy: IfNotPresent
     args:
       - "--leader-elect"
