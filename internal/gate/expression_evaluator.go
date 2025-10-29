@@ -27,12 +27,14 @@ import (
 type ExpressionEvaluator struct {
 	client.Client
 	context.Context
+	DefaultNamespace string
 }
 
-func NewExpressionEvaluator(ctx context.Context, c client.Client) *ExpressionEvaluator {
+func NewExpressionEvaluator(ctx context.Context, c client.Client, defaultNamespace string) *ExpressionEvaluator {
 	return &ExpressionEvaluator{
-		Client:  c,
-		Context: ctx,
+		Client:           c,
+		Context:          ctx,
+		DefaultNamespace: defaultNamespace,
 	}
 }
 
@@ -95,7 +97,7 @@ func isValidTarget(target gateshv1alpha1.GateTargetOne) bool {
 }
 
 func (e *ExpressionEvaluator) evaluateTarget(target gateshv1alpha1.GateTargetOne) (bool, error) {
-	obj, err := internal.GetReferencedObject(e.Context, e.Client, &target.ObjectRef, "default")
+	obj, err := internal.GetReferencedObject(e.Context, e.Client, &target.ObjectRef, e.DefaultNamespace)
 	if errors.IsNotFound(err) {
 		return false, nil
 	} else if err != nil {
