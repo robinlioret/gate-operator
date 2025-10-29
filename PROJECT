@@ -6,6 +6,8 @@ cliVersion: v4.9.0
 domain: gate.sh
 layout:
 - go.kubebuilder.io/v4
+plugins:
+  helm.kubebuilder.io/v1-alpha: {}
 projectName: gate-operator
 repo: github.com/robinlioret/gate-operator
 resources:
