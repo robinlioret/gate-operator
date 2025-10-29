@@ -3,7 +3,7 @@ controllerManager:
   replicas: 1
   container:
     image:
-      repository: docker pull ghcr.io/robinlioret/gate-operator
+      repository: ghcr.io/robinlioret/gate-operator
       tag: 0.0.1-rc1
     imagePullPolicy: IfNotPresent
     args:
