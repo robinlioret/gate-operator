@@ -17,30 +17,40 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// GateTarget defines how objects should be evaluated to validate the expression
-type GateTarget struct {
+type GateTargetCondition struct {
+	// Type of the kubernetes conditions.
+	// +default:value="Ready"
+	Type string `json:"type"`
+
+	// Type of the kubernetes conditions.
+	// +default:value="True"
+	Status metav1.ConditionStatus `json:"status"`
+}
+
+// GateTargetOne defines what object and how it should be evaluated to validate the expression
+type GateTargetOne struct {
 	// Base reference to the object(s) to evaluate. It can match multiple objects in the cluster
 	// +required
-	ObjectRef v1.ObjectReference `json:"objectRef"`
+	ObjectRef corev1.ObjectReference `json:"objectRef"`
 
-	// Select objects among the one matching the objectRef field using the labels
+	// Conditions criteria
 	// +optional
-	Selector metav1.LabelSelector `json:"selector,omitempty"`
+	Condition GateTargetCondition `json:"condition,omitempty"`
 }
 
 // GateExpression defines the conditions for the gate to be available
-// +kubebuilder:validation:XValidation:rule="has(self.target) || has(self.and) || has(self.or)",message="At least one of 'target', 'and', 'or' must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.targetOne) ? 1 : 0) + (has(self.and) ? 1 : 0) + (has(self.or) ? 1 : 0) == 1",message="Exactly one of 'targetOne', 'and', or 'or' must be specified"
 type GateExpression struct {
 	// Target to evaluate
 	// +optional
-	Target GateTarget `json:"target,omitempty"`
+	TargetOne GateTargetOne `json:"targetOne,omitempty"`
 
 	// If true, inverts the result of the target
 	// +optional
@@ -69,6 +79,10 @@ type GateSpec struct {
 	// The set of conditions to make the Gate available
 	// +required
 	Expression GateExpression `json:"expression"`
+
+	// Defines the duration between evaluations of a Gate
+	// +optional
+	RequeueAfter *metav1.Duration `json:"requeueAfter,omitempty"`
 }
 
 // GateStatus defines the observed state of Gate.
@@ -92,12 +106,22 @@ type GateStatus struct {
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// lastSuccessfulEvaluation defines when was the last time the gate was successfully evaluated.
+	// +optional
+	LastEvaluation *metav1.Time `json:"lastEvaluation,omitempty"`
+
+	// Easy access field representing the gate's condition
+	// +optional
+	State string `json:"state,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
 // Gate is the Schema for the gates API
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=`.status.state`
+// +kubebuilder:printcolumn:name="LastEval",type="date",JSONPath=`.status.lastEvaluation`
 type Gate struct {
 	metav1.TypeMeta `json:",inline"`
 

@@ -6,4 +6,14 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: gate-sample
 spec:
-  # TODO(user): Add fields here
+  expression:
+    targetOne:
+      objectRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: coredns
+        namespace: kube-system
+      condition:
+        type: Available
+        status: "True"
+  requeueAfter: 10s

@@ -18,7 +18,11 @@ package controller
 
 import (
 	"context"
+	"time"
 
+	expreval "github.com/robinlioret/gate-operator/internal/gate"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +30,8 @@ import (
 
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 )
+
+const GateRequeueCooldownSeconds = 1
 
 // GateReconciler reconciles a Gate object
 type GateReconciler struct {
@@ -47,11 +53,58 @@ type GateReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.22.3/pkg/reconcile
 func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := logf.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Get the object by reference
+	var gate gateshv1alpha1.Gate
+	if err := r.Get(ctx, req.NamespacedName, &gate); err != nil {
+		log.Error(err, "unable to fetch Gate")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
-	return ctrl.Result{}, nil
+	// Do not evaluate if it was updated too recently
+	if gate.Status.LastEvaluation != nil && gate.Status.LastEvaluation.Add(GateRequeueCooldownSeconds*time.Second).After(time.Now()) {
+		log.V(1).Info("Gate was already processed recently")
+		return ctrl.Result{}, nil
+	}
+
+	// Evaluate the expression
+	evaluator := expreval.NewExpressionEvaluator(ctx, r.Client)
+	result, err := evaluator.Evaluate(gate.Spec)
+	if err != nil {
+		log.Error(err, "failed to evaluate Gate")
+		return ctrl.Result{}, err
+	}
+
+	// Process the result and update the gate's status
+	if result {
+		log.Info("Gate is evaluated to true")
+		meta.SetStatusCondition(&gate.Status.Conditions, metav1.Condition{
+			Type:    "Ready",
+			Status:  "True",
+			Reason:  "GateEvaluatedTrue",
+			Message: "Gate was evaluated to true",
+		})
+		meta.RemoveStatusCondition(&gate.Status.Conditions, "Progressing")
+		gate.Status.State = "Ready"
+	} else {
+		log.Info("Gate is evaluated to false")
+		meta.SetStatusCondition(&gate.Status.Conditions, metav1.Condition{
+			Type:    "Progressing",
+			Status:  "True",
+			Reason:  "GateEvaluatedTrue",
+			Message: "Gate was evaluated to true",
+		})
+		meta.RemoveStatusCondition(&gate.Status.Conditions, "Ready")
+		gate.Status.State = "Progressing"
+	}
+
+	gate.Status.LastEvaluation = &metav1.Time{Time: time.Now()}
+	if err := r.Status().Update(ctx, &gate); err != nil {
+		log.Error(err, "failed to update Gate")
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{RequeueAfter: r.GetRequeueAfter(gate)}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -60,4 +113,12 @@ func (r *GateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&gateshv1alpha1.Gate{}).
 		Named("gate").
 		Complete(r)
+}
+
+func (r *GateReconciler) GetRequeueAfter(gate gateshv1alpha1.Gate) time.Duration {
+	if gate.Spec.RequeueAfter != nil {
+		return gate.Spec.RequeueAfter.Duration
+	} else {
+		return time.Second * 10
+	}
 }

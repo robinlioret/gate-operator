@@ -14,7 +14,14 @@ spec:
     singular: gate
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .status.lastEvaluation
+      name: LastEval
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Gate is the Schema for the gates API
@@ -55,9 +62,24 @@ spec:
                     items:
                       type: object
                     type: array
-                  target:
+                  targetOne:
                     description: Target to evaluate
                     properties:
+                      condition:
+                        description: Conditions criteria
+                        properties:
+                          status:
+                            default: "True"
+                            description: Type of the kubernetes conditions.
+                            type: string
+                          type:
+                            default: Ready
+                            description: Type of the kubernetes conditions.
+                            type: string
+                        required:
+                        - status
+                        - type
+                        type: object
                       objectRef:
                         description: Base reference to the object(s) to evaluate.
                           It can match multiple objects in the cluster
@@ -102,60 +124,17 @@ spec:
                             type: string
                         type: object
                         x-kubernetes-map-type: atomic
-                      selector:
-                        description: Select objects among the one matching the objectRef
-                          field using the labels
-                        properties:
-                          matchExpressions:
-                            description: matchExpressions is a list of label selector
-                              requirements. The requirements are ANDed.
-                            items:
-                              description: |-
-                                A label selector requirement is a selector that contains values, a key, and an operator that
-                                relates the key and values.
-                              properties:
-                                key:
-                                  description: key is the label key that the selector
-                                    applies to.
-                                  type: string
-                                operator:
-                                  description: |-
-                                    operator represents a key's relationship to a set of values.
-                                    Valid operators are In, NotIn, Exists and DoesNotExist.
-                                  type: string
-                                values:
-                                  description: |-
-                                    values is an array of string values. If the operator is In or NotIn,
-                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                    the values array must be empty. This array is replaced during a strategic
-                                    merge patch.
-                                  items:
-                                    type: string
-                                  type: array
-                                  x-kubernetes-list-type: atomic
-                              required:
-                              - key
-                              - operator
-                              type: object
-                            type: array
-                            x-kubernetes-list-type: atomic
-                          matchLabels:
-                            additionalProperties:
-                              type: string
-                            description: |-
-                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                              map is equivalent to an element of matchExpressions, whose key field is "key", the
-                              operator is "In", and the values array contains only "value". The requirements are ANDed.
-                            type: object
-                        type: object
-                        x-kubernetes-map-type: atomic
                     required:
                     - objectRef
                     type: object
                 type: object
                 x-kubernetes-validations:
-                - message: At least one of 'target', 'and', 'or' must be specified
-                  rule: has(self.target) || has(self.and) || has(self.or)
+                - message: Exactly one of 'targetOne', 'and', or 'or' must be specified
+                  rule: '(has(self.targetOne) ? 1 : 0) + (has(self.and) ? 1 : 0) +
+                    (has(self.or) ? 1 : 0) == 1'
+              requeueAfter:
+                description: Defines the duration between evaluations of a Gate
+                type: string
             required:
             - expression
             type: object
@@ -231,6 +210,14 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastEvaluation:
+                description: lastSuccessfulEvaluation defines when was the last time
+                  the gate was successfully evaluated.
+                format: date-time
+                type: string
+              state:
+                description: Easy access field representing the gate's condition
+                type: string
             type: object
         required:
         - spec
