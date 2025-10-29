@@ -19,6 +19,8 @@ import (
 	"context"
 
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+	"github.com/robinlioret/gate-operator/internal"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -74,8 +76,8 @@ func (e *ExpressionEvaluator) evaluateExpression(expression gateshv1alpha1.GateE
 		}
 	}
 
-	if isValidTarget(expression.Target) {
-		result, err = e.evaluateTarget(expression.Target)
+	if isValidTarget(expression.TargetOne) {
+		result, err = e.evaluateTarget(expression.TargetOne)
 		if err != nil {
 			return false, err
 		}
@@ -88,11 +90,17 @@ func (e *ExpressionEvaluator) evaluateExpression(expression gateshv1alpha1.GateE
 	return result, nil
 }
 
-func isValidTarget(target gateshv1alpha1.GateTarget) bool {
+func isValidTarget(target gateshv1alpha1.GateTargetOne) bool {
 	return target.ObjectRef.Kind != ""
 }
 
-func (e *ExpressionEvaluator) evaluateTarget(target gateshv1alpha1.GateTarget) (bool, error) {
+func (e *ExpressionEvaluator) evaluateTarget(target gateshv1alpha1.GateTargetOne) (bool, error) {
+	obj, err := internal.GetReferencedObject(e.Context, e.Client, &target.ObjectRef, "default")
+	if errors.IsNotFound(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
 
 	return true, nil
 }

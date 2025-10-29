@@ -8,7 +8,7 @@ metadata:
 spec:
   expression:
     and:
-      - target:
+      - targetOne:
           objectRef:
             kind: Deployment
             name: coredns

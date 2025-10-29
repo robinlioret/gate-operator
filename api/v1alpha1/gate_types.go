@@ -24,23 +24,33 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// GateTarget defines how objects should be evaluated to validate the expression
-type GateTarget struct {
+type GateTargetCondition struct {
+	// Type of the kubernetes conditions.
+	// +default:value="Ready"
+	Type string `json:"type"`
+
+	// Type of the kubernetes conditions.
+	// +default:value="true"
+	Value string `json:"value"`
+}
+
+// GateTargetOne defines what object and how it should be evaluated to validate the expression
+type GateTargetOne struct {
 	// Base reference to the object(s) to evaluate. It can match multiple objects in the cluster
 	// +required
 	ObjectRef v1.ObjectReference `json:"objectRef"`
 
-	// Select objects among the one matching the objectRef field using the labels
+	// Conditions criteria
 	// +optional
-	Selector metav1.LabelSelector `json:"selector,omitempty"`
+	Condition GateTargetCondition `json:"condition,omitempty"`
 }
 
 // GateExpression defines the conditions for the gate to be available
-// +kubebuilder:validation:XValidation:rule="(has(self.target) ? 1 : 0) + (has(self.and) ? 1 : 0) + (has(self.or) ? 1 : 0) == 1",message="Exactly one of 'target', 'and', or 'or' must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.targetOne) ? 1 : 0) + (has(self.and) ? 1 : 0) + (has(self.or) ? 1 : 0) == 1",message="Exactly one of 'targetOne', 'and', or 'or' must be specified"
 type GateExpression struct {
 	// Target to evaluate
 	// +optional
-	Target GateTarget `json:"target,omitempty"`
+	TargetOne GateTargetOne `json:"targetOne,omitempty"`
 
 	// If true, inverts the result of the target
 	// +optional
