@@ -9,6 +9,13 @@ jobs:
     name: Run on Ubuntu
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ steps.generate_token.outputs.token }}
+          approvers: myteam
+          minimum-approvals: 1
+
       - name: Clone the code
         uses: actions/checkout@v4
 
