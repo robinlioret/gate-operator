@@ -25,7 +25,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -64,32 +63,32 @@ type TestGate struct {
 //	},
 // }
 
-var gateClosedExpectedConditions = []metav1.Condition{
-	{
-		Type:    "Opened",
-		Status:  "False",
-		Reason:  "GateConditionNotMet",
-		Message: "Gate was evaluated to false",
-	},
-	{
-		Type:    "Closed",
-		Status:  "True",
-		Reason:  "GateConditionNotMet",
-		Message: "Gate was evaluated to false",
-	},
-	{
-		Type:    "Available",
-		Status:  "False",
-		Reason:  "GateConditionNotMet",
-		Message: "Gate was evaluated to false",
-	},
-	{
-		Type:    "Progressing",
-		Status:  "True",
-		Reason:  "GateConditionNotMet",
-		Message: "Gate was evaluated to false",
-	},
-}
+// var gateClosedExpectedConditions = []metav1.Condition{
+//	{
+//		Type:    "Opened",
+//		Status:  "False",
+//		Reason:  "GateConditionNotMet",
+//		Message: "Gate was evaluated to false",
+//	},
+//	{
+//		Type:    "Closed",
+//		Status:  "True",
+//		Reason:  "GateConditionNotMet",
+//		Message: "Gate was evaluated to false",
+//	},
+//	{
+//		Type:    "Available",
+//		Status:  "False",
+//		Reason:  "GateConditionNotMet",
+//		Message: "Gate was evaluated to false",
+//	},
+//	{
+//		Type:    "Progressing",
+//		Status:  "True",
+//		Reason:  "GateConditionNotMet",
+//		Message: "Gate was evaluated to false",
+//	},
+// }
 
 var testResources = []TestGate{
 	// Simplest opened gate
