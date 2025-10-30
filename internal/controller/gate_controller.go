@@ -118,14 +118,6 @@ func (r *GateReconciler) UpdateGateStatusFromResult(
 	status.TargetConditions = targetConditions
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *GateReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&gateshv1alpha1.Gate{}).
-		Named("gate").
-		Complete(r)
-}
-
 func (r *GateReconciler) EvaluateGateSpec(
 	ctx context.Context,
 	gate *gateshv1alpha1.Gate,
@@ -156,5 +148,33 @@ func (r *GateReconciler) ComputeGateOperation(
 	targetConditions []metav1.Condition,
 	operation gateshv1alpha1.GateOperation,
 ) bool {
-	return false
+	switch operation.Operator {
+	case gateshv1alpha1.GateOperatorAnd:
+		for _, targetCondition := range targetConditions {
+			if targetCondition.Status != metav1.ConditionTrue {
+				return false
+			}
+		}
+		return true
+
+	case gateshv1alpha1.GateOperatorOr:
+		for _, targetCondition := range targetConditions {
+			if targetCondition.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+
+	default:
+		logf.FromContext(ctx).Info("Unknown operator")
+		return false
+	}
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *GateReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&gateshv1alpha1.Gate{}).
+		Named("gate").
+		Complete(r)
 }
