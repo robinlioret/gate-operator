@@ -51,6 +51,11 @@ type GateTargetCondition struct {
 
 // GateExpression defines the conditions for the gate to be available
 type GateTarget struct {
+	// TargetName is the name of the target. Must be PascalCase.
+	// +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
+	// +required
+	TargetName string `json:"targetName"`
+
 	// Kind of the resource(s) to target
 	// +required
 	Kind string `json:"kind"`
@@ -134,6 +139,10 @@ type GateStatus struct {
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// List of the targets conditions
+	// +optional
+	TargetConditions []metav1.Condition `json:"targetConditions,omitempty"`
 
 	// lastSuccessfulEvaluation defines when was the last time the gate was successfully evaluated.
 	// +optional

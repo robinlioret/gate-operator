@@ -71,12 +71,8 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	result, err := r.EvaluateGateSpec(ctx, &gate)
-	if err != nil {
-		log.Error(err, "unable to evaluate gate")
-		return ctrl.Result{}, err
-	}
-	r.UpdateGateStatusFromResult(result, &gate.Status)
+	result, targetConditions := r.EvaluateGateSpec(ctx, &gate)
+	r.UpdateGateStatusFromResult(result, targetConditions, &gate.Status)
 
 	gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(gate.Spec.RequeueAfter.Duration)}
 	if err := r.Status().Update(ctx, &gate); err != nil {
@@ -87,7 +83,11 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, nil
 }
 
-func (r *GateReconciler) UpdateGateStatusFromResult(result bool, status *gateshv1alpha1.GateStatus) {
+func (r *GateReconciler) UpdateGateStatusFromResult(
+	result bool,
+	targetConditions []metav1.Condition,
+	status *gateshv1alpha1.GateStatus,
+) {
 	var message string
 	var reason string
 	var openedCondition metav1.ConditionStatus
@@ -114,6 +114,8 @@ func (r *GateReconciler) UpdateGateStatusFromResult(result bool, status *gateshv
 	// Closed conditions
 	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateClosed, Status: closedCondition, Reason: reason, Message: message})
 	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: "Progressing", Status: closedCondition, Reason: reason, Message: message})
+
+	status.TargetConditions = targetConditions
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -124,7 +126,35 @@ func (r *GateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *GateReconciler) EvaluateGateSpec(ctx context.Context, gate *gateshv1alpha1.Gate) (bool, error) {
+func (r *GateReconciler) EvaluateGateSpec(
+	ctx context.Context,
+	gate *gateshv1alpha1.Gate,
+) (bool, []metav1.Condition) {
+	targetConditions := make([]metav1.Condition, 0)
+	for _, target := range gate.Spec.Targets {
+		r.EvaluateTarget(ctx, &targetConditions, target)
+	}
+	result := r.ComputeGateOperation(ctx, targetConditions, gate.Spec.Operation)
+	return result, targetConditions
+}
 
-	return false, nil
+func (r *GateReconciler) EvaluateTarget(
+	ctx context.Context,
+	targetConditions *[]metav1.Condition,
+	target gateshv1alpha1.GateTarget,
+) {
+	meta.SetStatusCondition(targetConditions, metav1.Condition{
+		Type:    target.TargetName,
+		Status:  metav1.ConditionFalse,
+		Reason:  "TargetConditionNotMet",
+		Message: "Target condition not met",
+	})
+}
+
+func (r *GateReconciler) ComputeGateOperation(
+	ctx context.Context,
+	targetConditions []metav1.Condition,
+	operation gateshv1alpha1.GateOperation,
+) bool {
+	return false
 }
