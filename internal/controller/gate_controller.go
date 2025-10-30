@@ -125,5 +125,6 @@ func (r *GateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *GateReconciler) EvaluateGateSpec(ctx context.Context, gate *gateshv1alpha1.Gate) (bool, error) {
+
 	return false, nil
 }
