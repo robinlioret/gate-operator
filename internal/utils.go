@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
+	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,41 +28,91 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetReferencedObject(
-	ctx context.Context,
-	r client.Reader,
-	ref *corev1.ObjectReference,
-	namespace string,
-) (client.Object, error) {
-	if ref == nil {
-		return nil, errors.NewBadRequest("ObjectReference is nil")
+// FetchGateTargetObjects retrieves Kubernetes objects based on the GateTarget specification.
+// It handles both Name-based and LabelSelector-based lookups and returns a slice of unstructured objects.
+func FetchGateTargetObjects(ctx context.Context, cl client.Client, gateTarget *gateshv1alpha1.GateTarget, defaultNamespace string) ([]unstructured.Unstructured, error) {
+	// Determine the namespace to use
+	namespace := gateTarget.Namespace
+	if namespace == "" {
+		namespace = defaultNamespace
 	}
 
-	gv, err := schema.ParseGroupVersion(ref.APIVersion)
-	if err != nil {
-		return nil, err
-	}
-
+	// Create GroupVersionKind for the target resource
 	gvk := schema.GroupVersionKind{
-		Group:   gv.Group,
-		Version: gv.Version,
-		Kind:    ref.Kind,
+		Group:   "", // Will be set based on ApiVersion
+		Version: gateTarget.ApiVersion,
+		Kind:    gateTarget.Kind,
 	}
 
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(gvk)
+	// Parse Group and Version from ApiVersion
+	gv, err := schema.ParseGroupVersion(gateTarget.ApiVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ApiVersion %s: %w", gateTarget.ApiVersion, err)
+	}
+	gvk.Group = gv.Group
+	gvk.Version = gv.Version
 
-	ns := ref.Namespace
-	if ns == "" {
-		ns = namespace
+	// Validate that either Name or LabelSelector is set, but not both
+	if gateTarget.Name != "" && !isLabelSelectorEmpty(gateTarget.LabelSelector) {
+		return nil, fmt.Errorf("name and labelSelector are mutually exclusive in GateTarget %s", gateTarget.TargetName)
+	}
+	if gateTarget.Name == "" && isLabelSelectorEmpty(gateTarget.LabelSelector) {
+		return nil, fmt.Errorf("either name or labelSelector must be specified in GateTarget %s", gateTarget.TargetName)
 	}
 
-	key := client.ObjectKey{Name: ref.Name, Namespace: ns}
-	if err := r.Get(ctx, key, obj); err != nil {
-		return nil, err
+	var objects []unstructured.Unstructured
+
+	if gateTarget.Name != "" {
+		// Case 1: Fetch by Name
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(gvk)
+		err := cl.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      gateTarget.Name,
+		}, obj)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return objects, nil // Return empty slice if not found
+			}
+			return nil, fmt.Errorf("failed to get object %s/%s: %w", namespace, gateTarget.Name, err)
+		}
+		objects = append(objects, *obj)
+	} else {
+		// Case 2: Fetch by LabelSelector
+		selector, err := metav1.LabelSelectorAsSelector(&gateTarget.LabelSelector)
+		if err != nil {
+			return nil, fmt.Errorf("invalid label selector in GateTarget %s: %w", gateTarget.TargetName, err)
+		}
+
+		// Create a list to hold the results
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   gvk.Group,
+			Version: gvk.Version,
+			Kind:    gvk.Kind + "List", // Append "List" for the list kind
+		})
+
+		// List options with the label selector
+		listOptions := &client.ListOptions{
+			Namespace:     namespace,
+			LabelSelector: selector,
+		}
+
+		// Fetch the list of objects
+		err = cl.List(ctx, list, listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list objects for GateTarget %s: %w", gateTarget.TargetName, err)
+		}
+
+		objects = append(objects, list.Items...)
 	}
 
-	return obj, nil
+	return objects, nil
+}
+
+// isLabelSelectorEmpty checks if the LabelSelector is empty
+func isLabelSelectorEmpty(selector metav1.LabelSelector) bool {
+	return len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0
 }
 
 func GetObjectStatusConditions(obj client.Object) ([]metav1.Condition, error) {

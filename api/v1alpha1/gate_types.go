@@ -98,6 +98,7 @@ type GateSpec struct {
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
 	// The set of conditions to make the Gate ready.
+	// +kubebuilder:validation:MinItems:=1
 	// +required
 	Targets []GateTarget `json:"targets"`
 
