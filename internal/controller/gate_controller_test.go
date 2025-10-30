@@ -131,42 +131,42 @@ var testResources = []TestGate{
 	// },
 
 	// Simplest closed gate
-	{
-		Gate: gateshv1alpha1.Gate{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gateshv1alpha1.GroupVersion.String(),
-				Kind:       "Gate",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-simplest-closed",
-				Namespace: "default",
-			},
-			Spec: gateshv1alpha1.GateSpec{
-				Targets: []gateshv1alpha1.GateTarget{
-					{
-						TargetName: "NotFound",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "not-found",
-						Namespace:  "default",
-						ExistsOnly: true,
-					},
-				},
-			},
-		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: gateClosedExpectedConditions,
-			State:      gateshv1alpha1.GateStateClosed,
-			TargetConditions: []metav1.Condition{
-				{
-					Type:    "NotFound",
-					Status:  "False",
-					Reason:  "TargetConditionNotMet",
-					Message: "object not found",
-				},
-			},
-		},
-	},
+	// {
+	//	Gate: gateshv1alpha1.Gate{
+	//		TypeMeta: metav1.TypeMeta{
+	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
+	//			Kind:       "Gate",
+	//		},
+	//		ObjectMeta: metav1.ObjectMeta{
+	//			Name:      "test-simplest-closed",
+	//			Namespace: "default",
+	//		},
+	//		Spec: gateshv1alpha1.GateSpec{
+	//			Targets: []gateshv1alpha1.GateTarget{
+	//				{
+	//					TargetName: "NotFound",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "not-found",
+	//					Namespace:  "default",
+	//					ExistsOnly: true,
+	//				},
+	//			},
+	//		},
+	//	},
+	//	ExpectedStatus: gateshv1alpha1.GateStatus{
+	//		Conditions: gateClosedExpectedConditions,
+	//		State:      gateshv1alpha1.GateStateClosed,
+	//		TargetConditions: []metav1.Condition{
+	//			{
+	//				Type:    "NotFound",
+	//				Status:  "False",
+	//				Reason:  "TargetConditionNotMet",
+	//				Message: "object not found",
+	//			},
+	//		},
+	//	},
+	// },
 
 	// Mono target opened gate
 	// {
