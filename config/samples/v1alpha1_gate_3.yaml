@@ -8,10 +8,11 @@ metadata:
 spec:
   requeueAfter: 10s
   targets:
-    - apiVersion: apps/v1
+    - targetName: NotFound
+      apiVersion: apps/v1
       kind: Deployment
       namespace: kube-system
-      name: coredns
+      name: notFound
       desiredCondition:
         type: "Available"
         status: "True"

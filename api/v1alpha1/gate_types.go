@@ -32,8 +32,8 @@ const (
 
 type GateOperation struct {
 	// Operation to perform. By default, it is "And".
-	// +default:value="And"
 	// +kubebuilder:validation:Enum=And;Or
+	// +default:value="And"
 	Operator GateOperator `json:"operator,omitempty"`
 
 	// TODO: add threshold, and other operations possibilties

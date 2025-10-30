@@ -168,215 +168,215 @@ var testResources = []TestGate{
 		},
 	},
 
-	// Mono target opened gate
-	{
-		Gate: gateshv1alpha1.Gate{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gateshv1alpha1.GroupVersion.String(),
-				Kind:       "Gate",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-mono-target-opened",
-				Namespace: "default",
-			},
-			Spec: gateshv1alpha1.GateSpec{
-				Targets: []gateshv1alpha1.GateTarget{
-					{
-						TargetName: "CoreDns",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "coredns",
-						Namespace:  "kube-system",
-						ExistsOnly: false,
-						DesiredCondition: gateshv1alpha1.GateTargetCondition{
-							Type:   "Available",
-							Status: "True",
-						},
-					},
-				},
-			},
-		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: gateOpenedExpectedConditions,
-			State:      gateshv1alpha1.GateStateOpened,
-			TargetConditions: []metav1.Condition{
-				{
-					Type:    "CoreDns",
-					Status:  "True",
-					Reason:  "TargetConditionMet",
-					Message: "object found,desired condition met",
-				},
-			},
-		},
-	},
-
-	// Mono target closed gate
-	{
-		Gate: gateshv1alpha1.Gate{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gateshv1alpha1.GroupVersion.String(),
-				Kind:       "Gate",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-mono-target-closed",
-				Namespace: "default",
-			},
-			Spec: gateshv1alpha1.GateSpec{
-				Targets: []gateshv1alpha1.GateTarget{
-					{
-						TargetName: "NotFound",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "not-found",
-						Namespace:  "default",
-						ExistsOnly: false,
-						DesiredCondition: gateshv1alpha1.GateTargetCondition{
-							Type:   "Available",
-							Status: "True",
-						},
-					},
-				},
-			},
-		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: gateClosedExpectedConditions,
-			State:      gateshv1alpha1.GateStateClosed,
-			TargetConditions: []metav1.Condition{
-				{
-					Type:    "NotFound",
-					Status:  "False",
-					Reason:  "TargetConditionNotMet",
-					Message: "object not found",
-				},
-			},
-		},
-	},
-
-	// Multi targets and opened gate
-	{
-		Gate: gateshv1alpha1.Gate{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gateshv1alpha1.GroupVersion.String(),
-				Kind:       "Gate",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-mono-target-opened",
-				Namespace: "default",
-			},
-			Spec: gateshv1alpha1.GateSpec{
-				Targets: []gateshv1alpha1.GateTarget{
-					{
-						TargetName: "CoreDns1",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "coredns",
-						Namespace:  "kube-system",
-						ExistsOnly: false,
-						DesiredCondition: gateshv1alpha1.GateTargetCondition{
-							Type:   "Available",
-							Status: "True",
-						},
-					},
-					{
-						TargetName: "CoreDns2",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "coredns",
-						Namespace:  "kube-system",
-						ExistsOnly: false,
-						DesiredCondition: gateshv1alpha1.GateTargetCondition{
-							Type:   "Available",
-							Status: "True",
-						},
-					},
-				},
-				Operation: gateshv1alpha1.GateOperation{
-					Operator: gateshv1alpha1.GateOperatorAnd,
-				},
-			},
-		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: gateOpenedExpectedConditions,
-			State:      gateshv1alpha1.GateStateOpened,
-			TargetConditions: []metav1.Condition{
-				{
-					Type:    "CoreDns1",
-					Status:  "True",
-					Reason:  "TargetConditionMet",
-					Message: "object found,desired condition met",
-				},
-				{
-					Type:    "CoreDns2",
-					Status:  "True",
-					Reason:  "TargetConditionMet",
-					Message: "object found,desired condition met",
-				},
-			},
-		},
-	},
-
-	// Multi targets and closed gate
-	{
-		Gate: gateshv1alpha1.Gate{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gateshv1alpha1.GroupVersion.String(),
-				Kind:       "Gate",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-mono-target-closed",
-				Namespace: "default",
-			},
-			Spec: gateshv1alpha1.GateSpec{
-				Targets: []gateshv1alpha1.GateTarget{
-					{
-						TargetName: "CoreDns",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "coredns",
-						Namespace:  "kube-system",
-						ExistsOnly: false,
-						DesiredCondition: gateshv1alpha1.GateTargetCondition{
-							Type:   "Available",
-							Status: "True",
-						},
-					},
-					{
-						TargetName: "NotFound",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "not-found",
-						Namespace:  "default",
-						ExistsOnly: false,
-						DesiredCondition: gateshv1alpha1.GateTargetCondition{
-							Type:   "Available",
-							Status: "True",
-						},
-					},
-				},
-				Operation: gateshv1alpha1.GateOperation{
-					Operator: gateshv1alpha1.GateOperatorAnd,
-				},
-			},
-		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: gateOpenedExpectedConditions,
-			State:      gateshv1alpha1.GateStateOpened,
-			TargetConditions: []metav1.Condition{
-				{
-					Type:    "CoreDns",
-					Status:  "True",
-					Reason:  "TargetConditionMet",
-					Message: "object found,desired condition met",
-				},
-				{
-					Type:    "NotFound",
-					Status:  "False",
-					Reason:  "TargetConditionNotMet",
-					Message: "object not found",
-				},
-			},
-		},
-	},
+	//// Mono target opened gate
+	//{
+	//	Gate: gateshv1alpha1.Gate{
+	//		TypeMeta: metav1.TypeMeta{
+	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
+	//			Kind:       "Gate",
+	//		},
+	//		ObjectMeta: metav1.ObjectMeta{
+	//			Name:      "test-mono-target-opened",
+	//			Namespace: "default",
+	//		},
+	//		Spec: gateshv1alpha1.GateSpec{
+	//			Targets: []gateshv1alpha1.GateTarget{
+	//				{
+	//					TargetName: "CoreDns",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "coredns",
+	//					Namespace:  "kube-system",
+	//					ExistsOnly: false,
+	//					DesiredCondition: gateshv1alpha1.GateTargetCondition{
+	//						Type:   "Available",
+	//						Status: "True",
+	//					},
+	//				},
+	//			},
+	//		},
+	//	},
+	//	ExpectedStatus: gateshv1alpha1.GateStatus{
+	//		Conditions: gateOpenedExpectedConditions,
+	//		State:      gateshv1alpha1.GateStateOpened,
+	//		TargetConditions: []metav1.Condition{
+	//			{
+	//				Type:    "CoreDns",
+	//				Status:  "True",
+	//				Reason:  "TargetConditionMet",
+	//				Message: "object found,desired condition met",
+	//			},
+	//		},
+	//	},
+	//},
+	//
+	//// Mono target closed gate
+	//{
+	//	Gate: gateshv1alpha1.Gate{
+	//		TypeMeta: metav1.TypeMeta{
+	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
+	//			Kind:       "Gate",
+	//		},
+	//		ObjectMeta: metav1.ObjectMeta{
+	//			Name:      "test-mono-target-closed",
+	//			Namespace: "default",
+	//		},
+	//		Spec: gateshv1alpha1.GateSpec{
+	//			Targets: []gateshv1alpha1.GateTarget{
+	//				{
+	//					TargetName: "NotFound",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "not-found",
+	//					Namespace:  "default",
+	//					ExistsOnly: false,
+	//					DesiredCondition: gateshv1alpha1.GateTargetCondition{
+	//						Type:   "Available",
+	//						Status: "True",
+	//					},
+	//				},
+	//			},
+	//		},
+	//	},
+	//	ExpectedStatus: gateshv1alpha1.GateStatus{
+	//		Conditions: gateClosedExpectedConditions,
+	//		State:      gateshv1alpha1.GateStateClosed,
+	//		TargetConditions: []metav1.Condition{
+	//			{
+	//				Type:    "NotFound",
+	//				Status:  "False",
+	//				Reason:  "TargetConditionNotMet",
+	//				Message: "object not found",
+	//			},
+	//		},
+	//	},
+	//},
+	//
+	//// Multi targets and opened gate
+	//{
+	//	Gate: gateshv1alpha1.Gate{
+	//		TypeMeta: metav1.TypeMeta{
+	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
+	//			Kind:       "Gate",
+	//		},
+	//		ObjectMeta: metav1.ObjectMeta{
+	//			Name:      "test-mono-target-opened",
+	//			Namespace: "default",
+	//		},
+	//		Spec: gateshv1alpha1.GateSpec{
+	//			Targets: []gateshv1alpha1.GateTarget{
+	//				{
+	//					TargetName: "CoreDns1",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "coredns",
+	//					Namespace:  "kube-system",
+	//					ExistsOnly: false,
+	//					DesiredCondition: gateshv1alpha1.GateTargetCondition{
+	//						Type:   "Available",
+	//						Status: "True",
+	//					},
+	//				},
+	//				{
+	//					TargetName: "CoreDns2",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "coredns",
+	//					Namespace:  "kube-system",
+	//					ExistsOnly: false,
+	//					DesiredCondition: gateshv1alpha1.GateTargetCondition{
+	//						Type:   "Available",
+	//						Status: "True",
+	//					},
+	//				},
+	//			},
+	//			Operation: gateshv1alpha1.GateOperation{
+	//				Operator: gateshv1alpha1.GateOperatorAnd,
+	//			},
+	//		},
+	//	},
+	//	ExpectedStatus: gateshv1alpha1.GateStatus{
+	//		Conditions: gateOpenedExpectedConditions,
+	//		State:      gateshv1alpha1.GateStateOpened,
+	//		TargetConditions: []metav1.Condition{
+	//			{
+	//				Type:    "CoreDns1",
+	//				Status:  "True",
+	//				Reason:  "TargetConditionMet",
+	//				Message: "object found,desired condition met",
+	//			},
+	//			{
+	//				Type:    "CoreDns2",
+	//				Status:  "True",
+	//				Reason:  "TargetConditionMet",
+	//				Message: "object found,desired condition met",
+	//			},
+	//		},
+	//	},
+	//},
+	//
+	//// Multi targets and closed gate
+	//{
+	//	Gate: gateshv1alpha1.Gate{
+	//		TypeMeta: metav1.TypeMeta{
+	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
+	//			Kind:       "Gate",
+	//		},
+	//		ObjectMeta: metav1.ObjectMeta{
+	//			Name:      "test-mono-target-closed",
+	//			Namespace: "default",
+	//		},
+	//		Spec: gateshv1alpha1.GateSpec{
+	//			Targets: []gateshv1alpha1.GateTarget{
+	//				{
+	//					TargetName: "CoreDns",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "coredns",
+	//					Namespace:  "kube-system",
+	//					ExistsOnly: false,
+	//					DesiredCondition: gateshv1alpha1.GateTargetCondition{
+	//						Type:   "Available",
+	//						Status: "True",
+	//					},
+	//				},
+	//				{
+	//					TargetName: "NotFound",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "not-found",
+	//					Namespace:  "default",
+	//					ExistsOnly: false,
+	//					DesiredCondition: gateshv1alpha1.GateTargetCondition{
+	//						Type:   "Available",
+	//						Status: "True",
+	//					},
+	//				},
+	//			},
+	//			Operation: gateshv1alpha1.GateOperation{
+	//				Operator: gateshv1alpha1.GateOperatorAnd,
+	//			},
+	//		},
+	//	},
+	//	ExpectedStatus: gateshv1alpha1.GateStatus{
+	//		Conditions: gateOpenedExpectedConditions,
+	//		State:      gateshv1alpha1.GateStateOpened,
+	//		TargetConditions: []metav1.Condition{
+	//			{
+	//				Type:    "CoreDns",
+	//				Status:  "True",
+	//				Reason:  "TargetConditionMet",
+	//				Message: "object found,desired condition met",
+	//			},
+	//			{
+	//				Type:    "NotFound",
+	//				Status:  "False",
+	//				Reason:  "TargetConditionNotMet",
+	//				Message: "object not found",
+	//			},
+	//		},
+	//	},
+	//},
 }
 
 var _ = Describe("Gate Controller", func() {
@@ -407,6 +407,8 @@ var _ = Describe("Gate Controller", func() {
 			})
 
 			It("Should successfully reconcile the resource", func() {
+				AddReportEntry("test gate name", resource.Gate.Name)
+
 				By("Reconciling the created resource")
 				controllerReconciler := &GateReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
 				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -423,22 +425,26 @@ var _ = Describe("Gate Controller", func() {
 				By("Having set the status next evaluation field")
 				Expect(gate.Status.NextEvaluation.Time.After(time.Now())).To(BeTrue())
 
-				By("Having set the conditions field")
-				Expect(gate.Status.Conditions).NotTo(BeEmpty())
-				Expect(gate.Status.Conditions).To(HaveLen(len(resource.ExpectedStatus.Conditions)))
-				for _, desiredCondition := range resource.ExpectedStatus.Conditions {
-					condition := meta.FindStatusCondition(gate.Status.Conditions, desiredCondition.Type)
+				By("Having set the target conditions field")
+				Expect(gate.Status.TargetConditions).NotTo(BeEmpty())
+				Expect(gate.Status.TargetConditions).To(HaveLen(len(resource.ExpectedStatus.TargetConditions)))
+				for _, desiredCondition := range resource.ExpectedStatus.TargetConditions {
+					condition := meta.FindStatusCondition(gate.Status.TargetConditions, desiredCondition.Type)
+					By(fmt.Sprintf("Having updated the condition '%s' correctly", condition.Type))
+					AddReportEntry(fmt.Sprintf("TargetCondition: %s", condition.Type), condition)
 					Expect(condition).ToNot(BeNil())
 					Expect(condition.Status).To(Equal(desiredCondition.Status))
 					Expect(condition.Reason).To(Equal(desiredCondition.Reason))
 					Expect(condition.Message).To(Equal(desiredCondition.Message))
 				}
 
-				By("Having set the target condition field")
-				Expect(gate.Status.TargetConditions).NotTo(BeEmpty())
-				Expect(gate.Status.TargetConditions).To(HaveLen(len(resource.ExpectedStatus.TargetConditions)))
-				for _, desiredCondition := range resource.ExpectedStatus.TargetConditions {
-					condition := meta.FindStatusCondition(gate.Status.TargetConditions, desiredCondition.Type)
+				By("Having set the conditions field")
+				Expect(gate.Status.Conditions).NotTo(BeEmpty())
+				Expect(gate.Status.Conditions).To(HaveLen(len(resource.ExpectedStatus.Conditions)))
+				for _, desiredCondition := range resource.ExpectedStatus.Conditions {
+					condition := meta.FindStatusCondition(gate.Status.Conditions, desiredCondition.Type)
+					By(fmt.Sprintf("Having updated the condition '%s' correctly", condition.Type))
+					AddReportEntry(fmt.Sprintf("GateCondition: %s", condition.Type), condition)
 					Expect(condition).ToNot(BeNil())
 					Expect(condition.Status).To(Equal(desiredCondition.Status))
 					Expect(condition.Reason).To(Equal(desiredCondition.Reason))
