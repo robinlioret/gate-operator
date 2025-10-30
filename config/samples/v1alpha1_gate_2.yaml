@@ -8,11 +8,12 @@ metadata:
 spec:
   requeueAfter: 10s
   targets:
-    - apiVersion: apps/v1
+    - targetName: MyLabelReady
+      apiVersion: apps/v1
       kind: Deployment
       labelSelector:
         matchLabels:
-          my-label: imma-gate
+          my-label: this-gate
       desiredCondition:
         type: "Ready"
         status: "True"

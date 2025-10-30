@@ -7,7 +7,9 @@ metadata:
   name: gate-sample-1
 spec:
   targets:
-    - apiVersion: apps/v1
+    - targetName: CoreDns
+      apiVersion: apps/v1
       kind: Deployment
-      name: some-deployment
+      name: coredns
+      namespace: kube-system
       existsOnly: true

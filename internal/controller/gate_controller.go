@@ -18,8 +18,12 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/robinlioret/gate-operator/internal"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,23 +128,97 @@ func (r *GateReconciler) EvaluateGateSpec(
 ) (bool, []metav1.Condition) {
 	targetConditions := make([]metav1.Condition, 0)
 	for _, target := range gate.Spec.Targets {
-		r.EvaluateTarget(ctx, &targetConditions, target)
+		if target.Name != "" {
+			r.EvaluateSingleObjectTarget(ctx, &targetConditions, target, gate.Namespace)
+		} else {
+			panic("Multiple object targets is not implemented yet")
+		}
 	}
 	result := r.ComputeGateOperation(ctx, targetConditions, gate.Spec.Operation)
 	return result, targetConditions
 }
 
-func (r *GateReconciler) EvaluateTarget(
-	ctx context.Context,
+const ReasonTargetConditionNotMet = "TargetConditionNotMet"
+const ReasonTargetConditionMet = "TargetConditionMet"
+const MsgObjectNotFound = "object not found"
+const MsgObjectFound = "object found"
+const MsgError = "error %s"
+const MsgBadStatus = "bad status"
+const MsgMissingCondition = "missing condition"
+const MsgConditionStatusMismatch = "condition status not matching"
+const MsgConditionStatusMatch = "condition status matches"
+
+func (r *GateReconciler) EvaluateSingleObjectTarget(ctx context.Context, targetConditions *[]metav1.Condition, target gateshv1alpha1.GateTarget, defaultNamespace string) {
+	objRef := corev1.ObjectReference{
+		Name:       target.Name,
+		Namespace:  target.Namespace,
+		APIVersion: target.ApiVersion,
+		Kind:       target.Kind,
+	}
+	obj, err := internal.GetReferencedObject(ctx, r.Client, &objRef, defaultNamespace)
+	if errors.IsNotFound(err) {
+		meta.SetStatusCondition(targetConditions, metav1.Condition{
+			Type:    target.TargetName,
+			Status:  metav1.ConditionFalse,
+			Reason:  ReasonTargetConditionNotMet,
+			Message: MsgObjectNotFound,
+		})
+		return
+	} else if err != nil {
+		meta.SetStatusCondition(targetConditions, metav1.Condition{
+			Type:    target.TargetName,
+			Status:  metav1.ConditionFalse,
+			Reason:  ReasonTargetConditionNotMet,
+			Message: fmt.Sprintf(MsgError, err),
+		})
+		return
+	}
+
+	if target.ExistsOnly {
+		meta.SetStatusCondition(targetConditions, metav1.Condition{
+			Type:    target.TargetName,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonTargetConditionMet,
+			Message: MsgObjectFound,
+		})
+		return
+	}
+
+	msg := []string{MsgObjectFound}
+	r.EvaluateObjectConditions(err, obj, msg, targetConditions, target)
+	return
+}
+
+func (r *GateReconciler) EvaluateObjectConditions(
+	err error,
+	obj client.Object,
+	msg []string,
 	targetConditions *[]metav1.Condition,
 	target gateshv1alpha1.GateTarget,
-) {
-	meta.SetStatusCondition(targetConditions, metav1.Condition{
-		Type:    target.TargetName,
-		Status:  metav1.ConditionFalse,
-		Reason:  "TargetConditionNotMet",
-		Message: "Target condition not met",
-	})
+) bool {
+	objConditions, err := internal.GetObjectStatusConditions(obj)
+	if err != nil {
+		msg = append(msg, MsgBadStatus)
+		meta.SetStatusCondition(targetConditions, metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonTargetConditionNotMet, Message: strings.Join(msg, ",")})
+		return true
+	}
+
+	condition := meta.FindStatusCondition(objConditions, target.DesiredCondition.Type)
+	if condition == nil {
+		msg = append(msg, MsgMissingCondition)
+		meta.SetStatusCondition(targetConditions, metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonTargetConditionNotMet, Message: strings.Join(msg, ",")})
+		return true
+	}
+
+	if condition.Status != target.DesiredCondition.Status {
+		msg = append(msg, MsgConditionStatusMismatch)
+		meta.SetStatusCondition(targetConditions, metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonTargetConditionNotMet, Message: strings.Join(msg, ",")})
+		return true
+	}
+
+	msg = append(msg, MsgConditionStatusMatch)
+	meta.SetStatusCondition(targetConditions, metav1.Condition{Type: target.TargetName, Status: metav1.ConditionTrue, Reason: ReasonTargetConditionMet, Message: strings.Join(msg, ",")})
+	return false
 }
 
 func (r *GateReconciler) ComputeGateOperation(
@@ -149,25 +227,25 @@ func (r *GateReconciler) ComputeGateOperation(
 	operation gateshv1alpha1.GateOperation,
 ) bool {
 	switch operation.Operator {
-	case gateshv1alpha1.GateOperatorAnd:
-		for _, targetCondition := range targetConditions {
-			if targetCondition.Status != metav1.ConditionTrue {
-				return false
-			}
-		}
-		return true
-
 	case gateshv1alpha1.GateOperatorOr:
 		for _, targetCondition := range targetConditions {
 			if targetCondition.Status == metav1.ConditionTrue {
+				logf.FromContext(ctx).Info("Or operation to true")
 				return true
 			}
 		}
+		logf.FromContext(ctx).Info("Or operation to false")
 		return false
 
-	default:
-		logf.FromContext(ctx).Info("Unknown operator")
-		return false
+	default: // And
+		for _, targetCondition := range targetConditions {
+			if targetCondition.Status != metav1.ConditionTrue {
+				logf.FromContext(ctx).Info(fmt.Sprintf("And operation to false (%s)", targetCondition.Type))
+				return false
+			}
+		}
+		logf.FromContext(ctx).Info("And operation to true")
+		return true
 	}
 }
 
