@@ -37,9 +37,69 @@ type TestGate struct {
 	ExpectedStatus gateshv1alpha1.GateStatus
 }
 
+var gateOpenedExpectedStatus = gateshv1alpha1.GateStatus{
+	Conditions: []metav1.Condition{
+		{
+			Type:    "Opened",
+			Status:  "True",
+			Reason:  "GateConditionMet",
+			Message: "Gate was evaluated to true",
+		},
+		{
+			Type:    "Closed",
+			Status:  "False",
+			Reason:  "GateConditionMet",
+			Message: "Gate was evaluated to true",
+		},
+		{
+			Type:    "Available",
+			Status:  "True",
+			Reason:  "GateConditionMet",
+			Message: "Gate was evaluated to true",
+		},
+		{
+			Type:    "Progressing",
+			Status:  "False",
+			Reason:  "GateConditionMet",
+			Message: "Gate was evaluated to true",
+		},
+	},
+	State: gateshv1alpha1.GateStateOpened,
+}
+
+var gateClosedExpectedStatus = gateshv1alpha1.GateStatus{
+	Conditions: []metav1.Condition{
+		{
+			Type:    "Opened",
+			Status:  "False",
+			Reason:  "GateConditionNotMet",
+			Message: "Gate was evaluated to false",
+		},
+		{
+			Type:    "Closed",
+			Status:  "True",
+			Reason:  "GateConditionNotMet",
+			Message: "Gate was evaluated to false",
+		},
+		{
+			Type:    "Available",
+			Status:  "False",
+			Reason:  "GateConditionNotMet",
+			Message: "Gate was evaluated to false",
+		},
+		{
+			Type:    "Progressing",
+			Status:  "True",
+			Reason:  "GateConditionNotMet",
+			Message: "Gate was evaluated to false",
+		},
+	},
+	State: gateshv1alpha1.GateStateClosed,
+}
+
 var testResources = []TestGate{
+	// Simplest opened gate
 	{
-		// Simplest opened gate
 		Gate: gateshv1alpha1.Gate{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: gateshv1alpha1.GroupVersion.String(),
@@ -61,38 +121,11 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: []metav1.Condition{
-				{
-					Type:    "Opened",
-					Status:  "True",
-					Reason:  "GateConditionMet",
-					Message: "Gate was evaluated to true",
-				},
-				{
-					Type:    "Closed",
-					Status:  "False",
-					Reason:  "GateConditionMet",
-					Message: "Gate was evaluated to true",
-				},
-				{
-					Type:    "Available",
-					Status:  "True",
-					Reason:  "GateConditionMet",
-					Message: "Gate was evaluated to true",
-				},
-				{
-					Type:    "Progressing",
-					Status:  "False",
-					Reason:  "GateConditionMet",
-					Message: "Gate was evaluated to true",
-				},
-			},
-			State: gateshv1alpha1.GateStateOpened,
-		},
+		ExpectedStatus: gateOpenedExpectedStatus,
 	},
+
+	// Simplest closed gate
 	{
-		// Simplest closed gate
 		Gate: gateshv1alpha1.Gate{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: gateshv1alpha1.GroupVersion.String(),
@@ -114,35 +147,155 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: []metav1.Condition{
-				{
-					Type:    "Opened",
-					Status:  "False",
-					Reason:  "GateConditionNotMet",
-					Message: "Gate was evaluated to false",
-				},
-				{
-					Type:    "Closed",
-					Status:  "True",
-					Reason:  "GateConditionNotMet",
-					Message: "Gate was evaluated to false",
-				},
-				{
-					Type:    "Available",
-					Status:  "False",
-					Reason:  "GateConditionNotMet",
-					Message: "Gate was evaluated to false",
-				},
-				{
-					Type:    "Progressing",
-					Status:  "True",
-					Reason:  "GateConditionNotMet",
-					Message: "Gate was evaluated to false",
+		ExpectedStatus: gateClosedExpectedStatus,
+	},
+
+	// Mono target opened gate
+	{
+		Gate: gateshv1alpha1.Gate{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gateshv1alpha1.GroupVersion.String(),
+				Kind:       "Gate",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-mono-target-opened",
+				Namespace: "default",
+			},
+			Spec: gateshv1alpha1.GateSpec{
+				Targets: []gateshv1alpha1.GateTarget{
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "coredns",
+						Namespace:  "kube-system",
+						ExistsOnly: false,
+						DesiredCondition: gateshv1alpha1.GateTargetCondition{
+							Type:   "Available",
+							Status: "True",
+						},
+					},
 				},
 			},
-			State: gateshv1alpha1.GateStateClosed,
 		},
+		ExpectedStatus: gateOpenedExpectedStatus,
+	},
+
+	// Mono target closed gate
+	{
+		Gate: gateshv1alpha1.Gate{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gateshv1alpha1.GroupVersion.String(),
+				Kind:       "Gate",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-mono-target-closed",
+				Namespace: "default",
+			},
+			Spec: gateshv1alpha1.GateSpec{
+				Targets: []gateshv1alpha1.GateTarget{
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "not-found",
+						Namespace:  "default",
+						ExistsOnly: false,
+						DesiredCondition: gateshv1alpha1.GateTargetCondition{
+							Type:   "Available",
+							Status: "True",
+						},
+					},
+				},
+			},
+		},
+		ExpectedStatus: gateClosedExpectedStatus,
+	},
+
+	// Multi targets and opened gate
+	{
+		Gate: gateshv1alpha1.Gate{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gateshv1alpha1.GroupVersion.String(),
+				Kind:       "Gate",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-mono-target-opened",
+				Namespace: "default",
+			},
+			Spec: gateshv1alpha1.GateSpec{
+				Targets: []gateshv1alpha1.GateTarget{
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "coredns",
+						Namespace:  "kube-system",
+						ExistsOnly: false,
+						DesiredCondition: gateshv1alpha1.GateTargetCondition{
+							Type:   "Available",
+							Status: "True",
+						},
+					},
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "coredns",
+						Namespace:  "kube-system",
+						ExistsOnly: false,
+						DesiredCondition: gateshv1alpha1.GateTargetCondition{
+							Type:   "Available",
+							Status: "True",
+						},
+					},
+				},
+				Operation: gateshv1alpha1.GateOperation{
+					Operator: gateshv1alpha1.GateOperatorAnd,
+				},
+			},
+		},
+		ExpectedStatus: gateOpenedExpectedStatus,
+	},
+
+	// Multi targets and closed gate
+	{
+		Gate: gateshv1alpha1.Gate{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gateshv1alpha1.GroupVersion.String(),
+				Kind:       "Gate",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-mono-target-closed",
+				Namespace: "default",
+			},
+			Spec: gateshv1alpha1.GateSpec{
+				Targets: []gateshv1alpha1.GateTarget{
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "coredns",
+						Namespace:  "kube-system",
+						ExistsOnly: false,
+						DesiredCondition: gateshv1alpha1.GateTargetCondition{
+							Type:   "Available",
+							Status: "True",
+						},
+					},
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "not-found",
+						Namespace:  "default",
+						ExistsOnly: false,
+						DesiredCondition: gateshv1alpha1.GateTargetCondition{
+							Type:   "Available",
+							Status: "True",
+						},
+					},
+				},
+				Operation: gateshv1alpha1.GateOperation{
+					Operator: gateshv1alpha1.GateOperatorAnd,
+				},
+			},
+		},
+		ExpectedStatus: gateClosedExpectedStatus,
 	},
 }
 
