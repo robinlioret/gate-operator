@@ -70,10 +70,10 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Do not evaluate if it was updated too recently
-	//if gate.Status.NextEvaluation.After(time.Now()) {
+	// if gate.Status.NextEvaluation.After(time.Now()) {
 	//	log.V(1).Info("Gate was already processed recently")
 	//	return ctrl.Result{RequeueAfter: gate.Status.NextEvaluation.Sub(time.Now())}, nil
-	//}
+	// }
 
 	result, targetConditions := r.EvaluateGateSpec(ctx, &gate)
 	r.UpdateGateStatusFromResult(result, targetConditions, &gate.Status)
@@ -81,7 +81,7 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(gate.Spec.RequeueAfter.Duration)}
 	if err := r.Status().Update(ctx, &gate); err != nil {
 		log.Error(err, "unable to update Gate")
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
 	}
 	log.V(1).Info("Gate processed successfully")
 	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, nil
@@ -230,21 +230,21 @@ func (r *GateReconciler) ComputeGateOperation(
 	case gateshv1alpha1.GateOperatorOr:
 		for _, targetCondition := range targetConditions {
 			if targetCondition.Status == metav1.ConditionTrue {
-				//logf.FromContext(ctx).Info("Or operation to true")
+				// logf.FromContext(ctx).Info("Or operation to true")
 				return true
 			}
 		}
-		//logf.FromContext(ctx).Info("Or operation to false")
+		// logf.FromContext(ctx).Info("Or operation to false")
 		return false
 
 	default: // And
 		for _, targetCondition := range targetConditions {
 			if targetCondition.Status != metav1.ConditionTrue {
-				//logf.FromContext(ctx).Info(fmt.Sprintf("And operation to false (%s)", targetCondition.Type))
+				// logf.FromContext(ctx).Info(fmt.Sprintf("And operation to false (%s)", targetCondition.Type))
 				return false
 			}
 		}
-		//logf.FromContext(ctx).Info("And operation to true")
+		// logf.FromContext(ctx).Info("And operation to true")
 		return true
 	}
 }
@@ -254,5 +254,6 @@ func (r *GateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gateshv1alpha1.Gate{}).
 		Named("gate").
+		// WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
 		Complete(r)
 }
