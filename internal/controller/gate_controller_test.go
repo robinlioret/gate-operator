@@ -37,32 +37,32 @@ type TestGate struct {
 	ExpectedStatus gateshv1alpha1.GateStatus
 }
 
-var gateOpenedExpectedConditions = []metav1.Condition{
-	{
-		Type:    "Opened",
-		Status:  "True",
-		Reason:  "GateConditionMet",
-		Message: "Gate was evaluated to true",
-	},
-	{
-		Type:    "Closed",
-		Status:  "False",
-		Reason:  "GateConditionMet",
-		Message: "Gate was evaluated to true",
-	},
-	{
-		Type:    "Available",
-		Status:  "True",
-		Reason:  "GateConditionMet",
-		Message: "Gate was evaluated to true",
-	},
-	{
-		Type:    "Progressing",
-		Status:  "False",
-		Reason:  "GateConditionMet",
-		Message: "Gate was evaluated to true",
-	},
-}
+// var gateOpenedExpectedConditions = []metav1.Condition{
+//	{
+//		Type:    "Opened",
+//		Status:  "True",
+//		Reason:  "GateConditionMet",
+//		Message: "Gate was evaluated to true",
+//	},
+//	{
+//		Type:    "Closed",
+//		Status:  "False",
+//		Reason:  "GateConditionMet",
+//		Message: "Gate was evaluated to true",
+//	},
+//	{
+//		Type:    "Available",
+//		Status:  "True",
+//		Reason:  "GateConditionMet",
+//		Message: "Gate was evaluated to true",
+//	},
+//	{
+//		Type:    "Progressing",
+//		Status:  "False",
+//		Reason:  "GateConditionMet",
+//		Message: "Gate was evaluated to true",
+//	},
+// }
 
 var gateClosedExpectedConditions = []metav1.Condition{
 	{
@@ -92,8 +92,8 @@ var gateClosedExpectedConditions = []metav1.Condition{
 }
 
 var testResources = []TestGate{
-	//// Simplest opened gate
-	//{
+	// Simplest opened gate
+	// {
 	//	Gate: gateshv1alpha1.Gate{
 	//		TypeMeta: metav1.TypeMeta{
 	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
@@ -128,7 +128,7 @@ var testResources = []TestGate{
 	//			},
 	//		},
 	//	},
-	//},
+	// },
 
 	// Simplest closed gate
 	{
@@ -168,8 +168,8 @@ var testResources = []TestGate{
 		},
 	},
 
-	//// Mono target opened gate
-	//{
+	// Mono target opened gate
+	// {
 	//	Gate: gateshv1alpha1.Gate{
 	//		TypeMeta: metav1.TypeMeta{
 	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
@@ -208,10 +208,10 @@ var testResources = []TestGate{
 	//			},
 	//		},
 	//	},
-	//},
+	// },
 	//
-	//// Mono target closed gate
-	//{
+	// Mono target closed gate
+	// {
 	//	Gate: gateshv1alpha1.Gate{
 	//		TypeMeta: metav1.TypeMeta{
 	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
@@ -250,10 +250,10 @@ var testResources = []TestGate{
 	//			},
 	//		},
 	//	},
-	//},
+	// },
 	//
-	//// Multi targets and opened gate
-	//{
+	// Multi targets and opened gate
+	// {
 	//	Gate: gateshv1alpha1.Gate{
 	//		TypeMeta: metav1.TypeMeta{
 	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
@@ -313,10 +313,10 @@ var testResources = []TestGate{
 	//			},
 	//		},
 	//	},
-	//},
+	// },
 	//
-	//// Multi targets and closed gate
-	//{
+	// Multi targets and closed gate
+	// {
 	//	Gate: gateshv1alpha1.Gate{
 	//		TypeMeta: metav1.TypeMeta{
 	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
@@ -376,7 +376,7 @@ var testResources = []TestGate{
 	//			},
 	//		},
 	//	},
-	//},
+	// },
 }
 
 var _ = Describe("Gate Controller", func() {
