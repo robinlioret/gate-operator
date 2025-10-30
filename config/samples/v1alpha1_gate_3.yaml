@@ -8,11 +8,11 @@ metadata:
 spec:
   requeueAfter: 10s
   targets:
-    - targetName: NotFound
+    - targetName: WeirdConditionType
       apiVersion: apps/v1
       kind: Deployment
       namespace: kube-system
-      name: notFound
+      name: coredns
       desiredCondition:
-        type: "Available"
+        type: "Weirdo"
         status: "True"
