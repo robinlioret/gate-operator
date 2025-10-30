@@ -37,64 +37,58 @@ type TestGate struct {
 	ExpectedStatus gateshv1alpha1.GateStatus
 }
 
-var gateOpenedExpectedStatus = gateshv1alpha1.GateStatus{
-	Conditions: []metav1.Condition{
-		{
-			Type:    "Opened",
-			Status:  "True",
-			Reason:  "GateConditionMet",
-			Message: "Gate was evaluated to true",
-		},
-		{
-			Type:    "Closed",
-			Status:  "False",
-			Reason:  "GateConditionMet",
-			Message: "Gate was evaluated to true",
-		},
-		{
-			Type:    "Available",
-			Status:  "True",
-			Reason:  "GateConditionMet",
-			Message: "Gate was evaluated to true",
-		},
-		{
-			Type:    "Progressing",
-			Status:  "False",
-			Reason:  "GateConditionMet",
-			Message: "Gate was evaluated to true",
-		},
+var gateOpenedExpectedConditions = []metav1.Condition{
+	{
+		Type:    "Opened",
+		Status:  "True",
+		Reason:  "GateConditionMet",
+		Message: "Gate was evaluated to true",
 	},
-	State: gateshv1alpha1.GateStateOpened,
+	{
+		Type:    "Closed",
+		Status:  "False",
+		Reason:  "GateConditionMet",
+		Message: "Gate was evaluated to true",
+	},
+	{
+		Type:    "Available",
+		Status:  "True",
+		Reason:  "GateConditionMet",
+		Message: "Gate was evaluated to true",
+	},
+	{
+		Type:    "Progressing",
+		Status:  "False",
+		Reason:  "GateConditionMet",
+		Message: "Gate was evaluated to true",
+	},
 }
 
-var gateClosedExpectedStatus = gateshv1alpha1.GateStatus{
-	Conditions: []metav1.Condition{
-		{
-			Type:    "Opened",
-			Status:  "False",
-			Reason:  "GateConditionNotMet",
-			Message: "Gate was evaluated to false",
-		},
-		{
-			Type:    "Closed",
-			Status:  "True",
-			Reason:  "GateConditionNotMet",
-			Message: "Gate was evaluated to false",
-		},
-		{
-			Type:    "Available",
-			Status:  "False",
-			Reason:  "GateConditionNotMet",
-			Message: "Gate was evaluated to false",
-		},
-		{
-			Type:    "Progressing",
-			Status:  "True",
-			Reason:  "GateConditionNotMet",
-			Message: "Gate was evaluated to false",
-		},
+var gateClosedExpectedConditions = []metav1.Condition{
+	{
+		Type:    "Opened",
+		Status:  "False",
+		Reason:  "GateConditionNotMet",
+		Message: "Gate was evaluated to false",
 	},
-	State: gateshv1alpha1.GateStateClosed,
+	{
+		Type:    "Closed",
+		Status:  "True",
+		Reason:  "GateConditionNotMet",
+		Message: "Gate was evaluated to false",
+	},
+	{
+		Type:    "Available",
+		Status:  "False",
+		Reason:  "GateConditionNotMet",
+		Message: "Gate was evaluated to false",
+	},
+	{
+		Type:    "Progressing",
+		Status:  "True",
+		Reason:  "GateConditionNotMet",
+		Message: "Gate was evaluated to false",
+	},
 }
 
 var testResources = []TestGate{
@@ -112,6 +106,7 @@ var testResources = []TestGate{
 			Spec: gateshv1alpha1.GateSpec{
 				Targets: []gateshv1alpha1.GateTarget{
 					{
+						TargetName: "CoreDns",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "coredns",
@@ -121,7 +116,18 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateOpenedExpectedStatus,
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: gateOpenedExpectedConditions,
+			State:      gateshv1alpha1.GateStateOpened,
+			TargetConditions: []metav1.Condition{
+				{
+					Type:    "CoreDns",
+					Status:  "True",
+					Reason:  "TargetConditionMet",
+					Message: "object found",
+				},
+			},
+		},
 	},
 
 	// Simplest closed gate
@@ -138,6 +144,7 @@ var testResources = []TestGate{
 			Spec: gateshv1alpha1.GateSpec{
 				Targets: []gateshv1alpha1.GateTarget{
 					{
+						TargetName: "NotFound",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "not-found",
@@ -147,7 +154,18 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateClosedExpectedStatus,
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: gateClosedExpectedConditions,
+			State:      gateshv1alpha1.GateStateClosed,
+			TargetConditions: []metav1.Condition{
+				{
+					Type:    "NotFound",
+					Status:  "False",
+					Reason:  "TargetConditionNotMet",
+					Message: "object not found",
+				},
+			},
+		},
 	},
 
 	// Mono target opened gate
@@ -164,6 +182,7 @@ var testResources = []TestGate{
 			Spec: gateshv1alpha1.GateSpec{
 				Targets: []gateshv1alpha1.GateTarget{
 					{
+						TargetName: "CoreDns",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "coredns",
@@ -177,7 +196,18 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateOpenedExpectedStatus,
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: gateOpenedExpectedConditions,
+			State:      gateshv1alpha1.GateStateOpened,
+			TargetConditions: []metav1.Condition{
+				{
+					Type:    "CoreDns",
+					Status:  "True",
+					Reason:  "TargetConditionMet",
+					Message: "object found,desired condition met",
+				},
+			},
+		},
 	},
 
 	// Mono target closed gate
@@ -194,6 +224,7 @@ var testResources = []TestGate{
 			Spec: gateshv1alpha1.GateSpec{
 				Targets: []gateshv1alpha1.GateTarget{
 					{
+						TargetName: "NotFound",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "not-found",
@@ -207,7 +238,18 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateClosedExpectedStatus,
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: gateClosedExpectedConditions,
+			State:      gateshv1alpha1.GateStateClosed,
+			TargetConditions: []metav1.Condition{
+				{
+					Type:    "NotFound",
+					Status:  "False",
+					Reason:  "TargetConditionNotMet",
+					Message: "object not found",
+				},
+			},
+		},
 	},
 
 	// Multi targets and opened gate
@@ -224,6 +266,7 @@ var testResources = []TestGate{
 			Spec: gateshv1alpha1.GateSpec{
 				Targets: []gateshv1alpha1.GateTarget{
 					{
+						TargetName: "CoreDns1",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "coredns",
@@ -235,6 +278,7 @@ var testResources = []TestGate{
 						},
 					},
 					{
+						TargetName: "CoreDns2",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "coredns",
@@ -251,7 +295,24 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateOpenedExpectedStatus,
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: gateOpenedExpectedConditions,
+			State:      gateshv1alpha1.GateStateOpened,
+			TargetConditions: []metav1.Condition{
+				{
+					Type:    "CoreDns1",
+					Status:  "True",
+					Reason:  "TargetConditionMet",
+					Message: "object found,desired condition met",
+				},
+				{
+					Type:    "CoreDns2",
+					Status:  "True",
+					Reason:  "TargetConditionMet",
+					Message: "object found,desired condition met",
+				},
+			},
+		},
 	},
 
 	// Multi targets and closed gate
@@ -268,6 +329,7 @@ var testResources = []TestGate{
 			Spec: gateshv1alpha1.GateSpec{
 				Targets: []gateshv1alpha1.GateTarget{
 					{
+						TargetName: "CoreDns",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "coredns",
@@ -279,6 +341,7 @@ var testResources = []TestGate{
 						},
 					},
 					{
+						TargetName: "NotFound",
 						Kind:       "Deployment",
 						ApiVersion: "apps/v1",
 						Name:       "not-found",
@@ -295,7 +358,24 @@ var testResources = []TestGate{
 				},
 			},
 		},
-		ExpectedStatus: gateClosedExpectedStatus,
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: gateOpenedExpectedConditions,
+			State:      gateshv1alpha1.GateStateOpened,
+			TargetConditions: []metav1.Condition{
+				{
+					Type:    "CoreDns",
+					Status:  "True",
+					Reason:  "TargetConditionMet",
+					Message: "object found,desired condition met",
+				},
+				{
+					Type:    "NotFound",
+					Status:  "False",
+					Reason:  "TargetConditionNotMet",
+					Message: "object not found",
+				},
+			},
+		},
 	},
 }
 
@@ -345,8 +425,20 @@ var _ = Describe("Gate Controller", func() {
 
 				By("Having set the conditions field")
 				Expect(gate.Status.Conditions).NotTo(BeEmpty())
-				for _, desiredCondition := range resource.Gate.Status.Conditions {
+				Expect(gate.Status.Conditions).To(HaveLen(len(resource.ExpectedStatus.Conditions)))
+				for _, desiredCondition := range resource.ExpectedStatus.Conditions {
 					condition := meta.FindStatusCondition(gate.Status.Conditions, desiredCondition.Type)
+					Expect(condition).ToNot(BeNil())
+					Expect(condition.Status).To(Equal(desiredCondition.Status))
+					Expect(condition.Reason).To(Equal(desiredCondition.Reason))
+					Expect(condition.Message).To(Equal(desiredCondition.Message))
+				}
+
+				By("Having set the target condition field")
+				Expect(gate.Status.TargetConditions).NotTo(BeEmpty())
+				Expect(gate.Status.TargetConditions).To(HaveLen(len(resource.ExpectedStatus.TargetConditions)))
+				for _, desiredCondition := range resource.ExpectedStatus.TargetConditions {
+					condition := meta.FindStatusCondition(gate.Status.TargetConditions, desiredCondition.Type)
 					Expect(condition).ToNot(BeNil())
 					Expect(condition.Status).To(Equal(desiredCondition.Status))
 					Expect(condition.Reason).To(Equal(desiredCondition.Reason))
@@ -382,7 +474,7 @@ var _ = Describe("Gate Controller", func() {
 			Name:      "non-existing-resource",
 			Namespace: "default",
 		}
-		It("Should not fail while reconcile the non-exising resource", func() {
+		It("Should not fail while reconcile the non-existing resource", func() {
 			By("Reconciling the non-existing resource")
 			controllerReconciler := &GateReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

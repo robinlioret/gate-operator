@@ -137,6 +137,13 @@ func (in *GateStatus) DeepCopyInto(out *GateStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.TargetConditions != nil {
+		in, out := &in.TargetConditions, &out.TargetConditions
+		*out = make([]v1.Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	in.NextEvaluation.DeepCopyInto(&out.NextEvaluation)
 }
 
