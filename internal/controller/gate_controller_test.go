@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -36,61 +37,123 @@ type TestGate struct {
 	ExpectedStatus gateshv1alpha1.GateStatus
 }
 
-var testResources = []gateshv1alpha1.Gate{
-	// Simplest opened gate
+var testResources = []TestGate{
 	{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gateshv1alpha1.GroupVersion.String(),
-			Kind:       "Gate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-simplest-opened",
-			Namespace: "default",
-		},
-		Spec: gateshv1alpha1.GateSpec{
-			Targets: []gateshv1alpha1.GateTarget{
-				{
-					Kind:       "Deployment",
-					ApiVersion: "apps/v1",
-					Name:       "coredns",
-					Namespace:  "kube-system",
-					ExistsOnly: true,
+		// Simplest opened gate
+		Gate: gateshv1alpha1.Gate{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gateshv1alpha1.GroupVersion.String(),
+				Kind:       "Gate",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-simplest-opened",
+				Namespace: "default",
+			},
+			Spec: gateshv1alpha1.GateSpec{
+				Targets: []gateshv1alpha1.GateTarget{
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "coredns",
+						Namespace:  "kube-system",
+						ExistsOnly: true,
+					},
 				},
 			},
+		},
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:    "Opened",
+					Status:  "True",
+					Reason:  "GateConditionMet",
+					Message: "Gate was evaluated to true",
+				},
+				{
+					Type:    "Closed",
+					Status:  "False",
+					Reason:  "GateConditionMet",
+					Message: "Gate was evaluated to true",
+				},
+				{
+					Type:    "Available",
+					Status:  "True",
+					Reason:  "GateConditionMet",
+					Message: "Gate was evaluated to true",
+				},
+				{
+					Type:    "Progressing",
+					Status:  "False",
+					Reason:  "GateConditionMet",
+					Message: "Gate was evaluated to true",
+				},
+			},
+			State: gateshv1alpha1.GateStateOpened,
 		},
 	},
-	// Simplest closed gate
 	{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gateshv1alpha1.GroupVersion.String(),
-			Kind:       "Gate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-simplest-closed",
-			Namespace: "default",
-		},
-		Spec: gateshv1alpha1.GateSpec{
-			Targets: []gateshv1alpha1.GateTarget{
-				{
-					Kind:       "Deployment",
-					ApiVersion: "apps/v1",
-					Name:       "not-found",
-					Namespace:  "default",
-					ExistsOnly: true,
+		// Simplest closed gate
+		Gate: gateshv1alpha1.Gate{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gateshv1alpha1.GroupVersion.String(),
+				Kind:       "Gate",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-simplest-closed",
+				Namespace: "default",
+			},
+			Spec: gateshv1alpha1.GateSpec{
+				Targets: []gateshv1alpha1.GateTarget{
+					{
+						Kind:       "Deployment",
+						ApiVersion: "apps/v1",
+						Name:       "not-found",
+						Namespace:  "default",
+						ExistsOnly: true,
+					},
 				},
 			},
+		},
+		ExpectedStatus: gateshv1alpha1.GateStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:    "Opened",
+					Status:  "False",
+					Reason:  "GateConditionNotMet",
+					Message: "Gate was evaluated to false",
+				},
+				{
+					Type:    "Closed",
+					Status:  "True",
+					Reason:  "GateConditionNotMet",
+					Message: "Gate was evaluated to false",
+				},
+				{
+					Type:    "Available",
+					Status:  "False",
+					Reason:  "GateConditionNotMet",
+					Message: "Gate was evaluated to false",
+				},
+				{
+					Type:    "Progressing",
+					Status:  "True",
+					Reason:  "GateConditionNotMet",
+					Message: "Gate was evaluated to false",
+				},
+			},
+			State: gateshv1alpha1.GateStateClosed,
 		},
 	},
 }
 
 var _ = Describe("Gate Controller", func() {
 	for _, resource := range testResources {
-		Context(fmt.Sprintf("When reconciling a resource: %s", resource.Name), func() {
+		Context(fmt.Sprintf("When reconciling a resource: %s", resource.Gate.Name), func() {
 			ctx := context.Background()
 
 			typeNamespacedName := types.NamespacedName{
-				Name:      resource.Name,
-				Namespace: resource.Namespace,
+				Name:      resource.Gate.Name,
+				Namespace: resource.Gate.Namespace,
 			}
 			gate := &gateshv1alpha1.Gate{}
 
@@ -98,16 +161,16 @@ var _ = Describe("Gate Controller", func() {
 				By("Creating the custom resource for the Kind Gate")
 				err := k8sClient.Get(ctx, typeNamespacedName, gate)
 				if err != nil && errors.IsNotFound(err) {
-					Expect(k8sClient.Create(ctx, &resource)).To(Succeed())
+					Expect(k8sClient.Create(ctx, &resource.Gate)).To(Succeed())
 				}
 			})
 
 			AfterEach(func() {
-				err := k8sClient.Get(ctx, typeNamespacedName, &resource)
+				err := k8sClient.Get(ctx, typeNamespacedName, &resource.Gate)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Cleanup the specific resource instance Gate")
-				Expect(k8sClient.Delete(ctx, &resource)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, &resource.Gate)).To(Succeed())
 			})
 
 			It("Should successfully reconcile the resource", func() {
@@ -129,11 +192,19 @@ var _ = Describe("Gate Controller", func() {
 
 				By("Having set the conditions field")
 				Expect(gate.Status.Conditions).NotTo(BeEmpty())
+				for _, desiredCondition := range resource.Gate.Status.Conditions {
+					condition := meta.FindStatusCondition(gate.Status.Conditions, desiredCondition.Type)
+					Expect(condition).ToNot(BeNil())
+					Expect(condition.Status).To(Equal(desiredCondition.Status))
+					Expect(condition.Reason).To(Equal(desiredCondition.Reason))
+					Expect(condition.Message).To(Equal(desiredCondition.Message))
+				}
 
 				By("Having set the status state field")
 				Expect(gate.Status.State).NotTo(Equal(""))
+				Expect(gate.Status.State).To(Equal(resource.ExpectedStatus.State))
 
-				By("Opening the gate")
+				By("Having the right status")
 				Expect(gate.Status.State).NotTo(Equal(gateshv1alpha1.GateStateOpened))
 
 				oldNextEvaluation := gate.Status.NextEvaluation
