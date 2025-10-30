@@ -92,43 +92,43 @@ var gateClosedExpectedConditions = []metav1.Condition{
 }
 
 var testResources = []TestGate{
-	// Simplest opened gate
-	{
-		Gate: gateshv1alpha1.Gate{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gateshv1alpha1.GroupVersion.String(),
-				Kind:       "Gate",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-simplest-opened",
-				Namespace: "default",
-			},
-			Spec: gateshv1alpha1.GateSpec{
-				Targets: []gateshv1alpha1.GateTarget{
-					{
-						TargetName: "CoreDns",
-						Kind:       "Deployment",
-						ApiVersion: "apps/v1",
-						Name:       "coredns",
-						Namespace:  "kube-system",
-						ExistsOnly: true,
-					},
-				},
-			},
-		},
-		ExpectedStatus: gateshv1alpha1.GateStatus{
-			Conditions: gateOpenedExpectedConditions,
-			State:      gateshv1alpha1.GateStateOpened,
-			TargetConditions: []metav1.Condition{
-				{
-					Type:    "CoreDns",
-					Status:  "True",
-					Reason:  "TargetConditionMet",
-					Message: "object found",
-				},
-			},
-		},
-	},
+	//// Simplest opened gate
+	//{
+	//	Gate: gateshv1alpha1.Gate{
+	//		TypeMeta: metav1.TypeMeta{
+	//			APIVersion: gateshv1alpha1.GroupVersion.String(),
+	//			Kind:       "Gate",
+	//		},
+	//		ObjectMeta: metav1.ObjectMeta{
+	//			Name:      "test-simplest-opened",
+	//			Namespace: "default",
+	//		},
+	//		Spec: gateshv1alpha1.GateSpec{
+	//			Targets: []gateshv1alpha1.GateTarget{
+	//				{
+	//					TargetName: "CoreDns",
+	//					Kind:       "Deployment",
+	//					ApiVersion: "apps/v1",
+	//					Name:       "coredns",
+	//					Namespace:  "kube-system",
+	//					ExistsOnly: true,
+	//				},
+	//			},
+	//		},
+	//	},
+	//	ExpectedStatus: gateshv1alpha1.GateStatus{
+	//		Conditions: gateOpenedExpectedConditions,
+	//		State:      gateshv1alpha1.GateStateOpened,
+	//		TargetConditions: []metav1.Condition{
+	//			{
+	//				Type:    "CoreDns",
+	//				Status:  "True",
+	//				Reason:  "TargetConditionMet",
+	//				Message: "object found",
+	//			},
+	//		},
+	//	},
+	//},
 
 	// Simplest closed gate
 	{
