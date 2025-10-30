@@ -1,0 +1,18 @@
+apiVersion: gate.sh/v1alpha1
+kind: Gate
+metadata:
+  labels:
+    app.kubernetes.io/name: gate-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: gate-sample-4
+  namespace: kube-system
+spec:
+  requeueAfter: 10s
+  targets:
+    - targetName: SameNs
+      apiVersion: apps/v1
+      kind: Deployment
+      name: coredns
+      desiredCondition:
+        type: "Available"
+        status: "True"
