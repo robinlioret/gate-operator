@@ -31,6 +31,11 @@ import (
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 )
 
+type TestGate struct {
+	Gate           gateshv1alpha1.Gate
+	ExpectedStatus gateshv1alpha1.GateStatus
+}
+
 var testResources = []gateshv1alpha1.Gate{
 	// Simplest opened gate
 	{
