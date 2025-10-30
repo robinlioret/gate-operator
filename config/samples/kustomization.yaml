@@ -3,4 +3,5 @@ resources:
   - v1alpha1_gate_1.yaml
   - v1alpha1_gate_2.yaml
   - v1alpha1_gate_3.yaml
+  - v1alpha1_gate_4.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
