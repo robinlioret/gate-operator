@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,8 +30,6 @@ import (
 
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 )
-
-const GateRequeueCooldownSeconds = 1
 
 // GateReconciler reconciles a Gate object
 type GateReconciler struct {
@@ -57,7 +56,11 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Get the object by reference
 	var gate gateshv1alpha1.Gate
-	if err := r.Get(ctx, req.NamespacedName, &gate); err != nil {
+	err := r.Get(ctx, req.NamespacedName, &gate)
+	if errors.IsNotFound(err) {
+		log.Info("Gate not found")
+		return ctrl.Result{}, nil
+	} else if err != nil {
 		log.Error(err, "unable to fetch Gate")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -85,47 +88,32 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 func (r *GateReconciler) UpdateGateStatusFromResult(result bool, status *gateshv1alpha1.GateStatus) {
+	var message string
+	var reason string
+	var openedCondition metav1.ConditionStatus
+	var closedCondition metav1.ConditionStatus
+
 	if result {
 		status.State = gateshv1alpha1.GateStateOpened
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    "Opened",
-			Status:  metav1.ConditionTrue,
-			Reason:  "GateConditionMet",
-			Message: "Gate was evaluated to true",
-		})
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "GateConditionMet",
-			Message: "Gate was evaluated to true",
-		})
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionFalse,
-			Reason:  "GateConditionMet",
-			Message: "Gate was evaluated to true",
-		})
+		message = "Gate was evaluated to true"
+		reason = "GateConditionMet"
+		openedCondition = metav1.ConditionTrue
+		closedCondition = metav1.ConditionFalse
 	} else {
 		status.State = gateshv1alpha1.GateStateClosed
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    "Opened",
-			Status:  metav1.ConditionFalse,
-			Reason:  "GateConditionNotMet",
-			Message: "Gate was evaluated to true",
-		})
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionFalse,
-			Reason:  "GateConditionNotMet",
-			Message: "Gate was evaluated to false",
-		})
-		meta.SetStatusCondition(&status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionTrue,
-			Reason:  "GateConditionNotMet",
-			Message: "Gate was evaluated to false",
-		})
+		message = "Gate was evaluated to false"
+		reason = "GateConditionNotMet"
+		openedCondition = metav1.ConditionFalse
+		closedCondition = metav1.ConditionTrue
 	}
+
+	// Opened conditions
+	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateOpened, Status: openedCondition, Reason: reason, Message: message})
+	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: "Available", Status: openedCondition, Reason: reason, Message: message})
+
+	// Closed conditions
+	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateClosed, Status: closedCondition, Reason: reason, Message: message})
+	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: "Progressing", Status: closedCondition, Reason: reason, Message: message})
 }
 
 // SetupWithManager sets up the controller with the Manager.

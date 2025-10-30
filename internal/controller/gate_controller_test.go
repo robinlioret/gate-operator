@@ -32,14 +32,14 @@ import (
 )
 
 var testResources = []gateshv1alpha1.Gate{
-	// Simpliest gate
+	// Simplest opened gate
 	{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gateshv1alpha1.GroupVersion.String(),
 			Kind:       "Gate",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gate-simpliest",
+			Name:      "test-simplest-opened",
 			Namespace: "default",
 		},
 		Spec: gateshv1alpha1.GateSpec{
@@ -49,6 +49,28 @@ var testResources = []gateshv1alpha1.Gate{
 					ApiVersion: "apps/v1",
 					Name:       "coredns",
 					Namespace:  "kube-system",
+					ExistsOnly: true,
+				},
+			},
+		},
+	},
+	// Simplest closed gate
+	{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gateshv1alpha1.GroupVersion.String(),
+			Kind:       "Gate",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-simplest-closed",
+			Namespace: "default",
+		},
+		Spec: gateshv1alpha1.GateSpec{
+			Targets: []gateshv1alpha1.GateTarget{
+				{
+					Kind:       "Deployment",
+					ApiVersion: "apps/v1",
+					Name:       "not-found",
+					Namespace:  "default",
 					ExistsOnly: true,
 				},
 			},
@@ -83,13 +105,9 @@ var _ = Describe("Gate Controller", func() {
 				Expect(k8sClient.Delete(ctx, &resource)).To(Succeed())
 			})
 
-			It("should successfully reconcile the resource", func() {
+			It("Should successfully reconcile the resource", func() {
 				By("Reconciling the created resource")
-				controllerReconciler := &GateReconciler{
-					Client: k8sClient,
-					Scheme: k8sClient.Scheme(),
-				}
-
+				controllerReconciler := &GateReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
 				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 					NamespacedName: typeNamespacedName,
 				})
@@ -100,13 +118,12 @@ var _ = Describe("Gate Controller", func() {
 				By("Getting the reconciled resource")
 				err = k8sClient.Get(ctx, typeNamespacedName, gate)
 				Expect(err).NotTo(HaveOccurred())
-				AddReportEntry("gate", gate)
 
 				By("Having set the status next evaluation field")
 				Expect(gate.Status.NextEvaluation.Time.After(time.Now())).To(BeTrue())
 
 				By("Having set the conditions field")
-				Expect(len(gate.Status.Conditions)).NotTo(Equal(0))
+				Expect(gate.Status.Conditions).NotTo(BeEmpty())
 
 				By("Having set the status state field")
 				Expect(gate.Status.State).NotTo(Equal(""))
@@ -130,4 +147,19 @@ var _ = Describe("Gate Controller", func() {
 			})
 		})
 	}
+
+	Context("When reconciling a non-existing resource", func() {
+		typeNamespacedName := types.NamespacedName{
+			Name:      "non-existing-resource",
+			Namespace: "default",
+		}
+		It("Should not fail while reconcile the non-exising resource", func() {
+			By("Reconciling the non-existing resource")
+			controllerReconciler := &GateReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 })
