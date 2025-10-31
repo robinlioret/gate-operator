@@ -47,7 +47,7 @@ jobs:
       - name: Push Helm chart to GHCR
         working-directory: ./dist/chart
         run: |
-          CHART_FILE="chart-${{ steps.version.outputs.version }}.tgz"
+          CHART_FILE="gate-operator-${{ steps.version.outputs.version }}.tgz"
           OCI_URL="oci://ghcr.io/${{ github.repository }}"
           
           echo "Pushing $CHART_FILE to $OCI_URL"
