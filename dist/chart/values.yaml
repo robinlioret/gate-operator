@@ -40,6 +40,9 @@ controllerManager:
       type: RuntimeDefault
   terminationGracePeriodSeconds: 10
   serviceAccountName: gate-operator-controller-manager
+  tolerations: []
+  nodeSelector: {}
+  affinity: {}
 
 # [RBAC]: To enable RBAC (Permissions) configurations
 rbac:
