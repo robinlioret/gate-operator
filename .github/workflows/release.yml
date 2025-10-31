@@ -49,3 +49,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Run chart-releaser
+        uses: bitdeps/helm-oci-charts-releaser@v0.1.3
+        with:
+          oci_registry: ghcr.io/robinlioret/gate-operator
+          oci_username: username
+          oci_password: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          charts_dir: dist/chart
+          mark_as_latest: ${{ github.ref_name == 'latest' }}
+          tag_name_pattern: '{chartName}-chart'
