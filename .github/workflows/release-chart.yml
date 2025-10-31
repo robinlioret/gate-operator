@@ -48,7 +48,7 @@ jobs:
         working-directory: ./dist/chart
         run: |
           CHART_FILE="gate-operator-${{ steps.version.outputs.version }}.tgz"
-          OCI_URL="oci://ghcr.io/${{ github.repository }}/chart"
+          OCI_URL="oci://ghcr.io/${{ github.repository }}"
           
           echo "Pushing $CHART_FILE to $OCI_URL"
           helm push "$CHART_FILE" "$OCI_URL"
