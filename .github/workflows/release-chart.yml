@@ -4,40 +4,31 @@ on:
   push:
     tags:
       - 'v*'
-      - 'latest'
-      - 'devel'
 
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 jobs:
   build-and-push-chart:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./dist/chart
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Needed for git tag resolution
+          fetch-depth: 0
 
-      - name: Extract tag name
-        id: tags
+      - name: Extract version from tag
+        id: version
         run: |
-          REF="${{ github.ref }}"
-          TAG=${REF#refs/tags/}
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "Chart version will be: ${TAG}"
+          TAG=${GITHUB_REF#refs/tags/v}
+          echo "version=${TAG}" >> $GITHUB_OUTPUT
+          echo "Chart version: ${TAG}"
 
-      - name: Set up QEMU (for multi-platform)
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.15.1'
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -47,27 +38,23 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package Helm chart
+        working-directory: ./dist/chart
         run: |
-          helm package . --app-version ${{ steps.tags.outputs.tag }} --version ${{ steps.tags.outputs.tag }} --destination .
+          helm package . \
+            --app-version ${{ steps.version.outputs.version }} \
+            --version ${{ steps.version.outputs.version }}
 
       - name: Push Helm chart to GHCR
+        working-directory: ./dist/chart
         run: |
-          CHART_FILE=$(ls *.tgz | head -n1)
-          IMAGE_NAME=ghcr.io/${{ github.repository }}/gate-operator-chart:${{ steps.tags.outputs.tag }}
+          CHART_FILE="gate-operator-${{ steps.version.outputs.version }}.tgz"
+          OCI_URL="oci://ghcr.io/${{ github.repository }}/gate-operator-chart"
           
-          echo "Pushing $CHART_FILE to $IMAGE_NAME"
-          
-          helm push $CHART_FILE oci://ghcr.io/${{ github.repository }}/gate-operator-chart
-          
-          # Tag as 'latest' if the tag is 'latest' or 'devel'
-          if [[ "${{ steps.tags.outputs.tag }}" == "latest" || "${{ steps.tags.outputs.tag }}" == "devel" ]]; then
-            echo "Also tagging as latest"
-            helm push $CHART_FILE oci://ghcr.io/${{ github.repository }}/gate-operator-chart:latest
-          fi
+          echo "Pushing $CHART_FILE to $OCI_URL"
+          helm push "$CHART_FILE" "$OCI_URL"
 
-#      - name: Create GitHub Release (optional)
-#        if: startsWith(github.ref, 'refs/tags/v')
-#        uses: softprops/action-gh-release@v2
-#        with:
-#          files: dist/chart/*.tgz
-#          generate_release_notes: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/chart/gate-operator-${{ steps.version.outputs.version }}.tgz
+          generate_release_notes: true
