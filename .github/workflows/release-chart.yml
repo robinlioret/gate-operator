@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build-and-push-chart:
+    if: github.repository == 'robinlioret/gate-operator'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
