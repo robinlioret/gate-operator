@@ -75,7 +75,7 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	//	return ctrl.Result{RequeueAfter: gate.Status.NextEvaluation.Sub(time.Now())}, nil
 	// }
 
-	result, targetConditions := r.EvaluateGateSpec(ctx, &gate)
+	result, targetConditions := r.EvaluateGateSpec(ctx, gate.Namespace, gate.Spec)
 	r.UpdateGateStatusFromResult(result, targetConditions, &gate.Status)
 
 	gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(gate.Spec.RequeueAfter.Duration)}
@@ -124,13 +124,14 @@ func (r *GateReconciler) UpdateGateStatusFromResult(
 
 func (r *GateReconciler) EvaluateGateSpec(
 	ctx context.Context,
-	gate *gateshv1alpha1.Gate,
+	namespace string,
+	gateSpec gateshv1alpha1.GateSpec,
 ) (bool, []metav1.Condition) {
 	targetConditions := make([]metav1.Condition, 0)
-	for _, target := range gate.Spec.Targets {
-		meta.SetStatusCondition(&targetConditions, r.EvaluateTarget(ctx, gate, &target))
+	for _, target := range gateSpec.Targets {
+		meta.SetStatusCondition(&targetConditions, r.EvaluateTarget(ctx, namespace, &target))
 	}
-	result := r.ComputeGateOperation(ctx, targetConditions, gate.Spec.Operation)
+	result := r.ComputeGateOperation(ctx, targetConditions, gateSpec.Operation)
 	return result, targetConditions
 }
 
@@ -153,10 +154,10 @@ type TargetObjectResult struct {
 	Message string
 }
 
-func (r *GateReconciler) EvaluateTarget(ctx context.Context, gate *gateshv1alpha1.Gate, target *gateshv1alpha1.GateTarget) metav1.Condition {
+func (r *GateReconciler) EvaluateTarget(ctx context.Context, namespace string, target *gateshv1alpha1.GateTarget) metav1.Condition {
 	log := logf.FromContext(ctx)
 
-	objects, err := internal.FetchGateTargetObjects(ctx, r.Client, target, gate.Namespace)
+	objects, err := internal.FetchGateTargetObjects(ctx, r.Client, target, namespace)
 	if err != nil {
 		log.Error(err, "unable to fetch target objects")
 		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonErrorWhileFetching, Message: fmt.Sprintf(MessageErrorWhileFetching, err.Error())}

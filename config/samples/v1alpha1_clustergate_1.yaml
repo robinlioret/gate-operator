@@ -1,0 +1,15 @@
+apiVersion: gate.sh/v1alpha1
+kind: ClusterGate
+metadata:
+  labels:
+    app.kubernetes.io/name: gate-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: clustergate-sample-1
+spec:
+  targets:
+    - targetName: CoreDns
+      apiVersion: apps/v1
+      kind: Deployment
+      name: coredns
+      namespace: kube-system
+      existsOnly: true

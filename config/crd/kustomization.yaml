@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/gate.sh_gates.yaml
+- bases/gate.sh_clustergates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

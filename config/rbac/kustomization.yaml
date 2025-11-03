@@ -22,6 +22,9 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the gate-operator itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- clustergate_admin_role.yaml
+- clustergate_editor_role.yaml
+- clustergate_viewer_role.yaml
 - gate_admin_role.yaml
 - gate_editor_role.yaml
 - gate_viewer_role.yaml
