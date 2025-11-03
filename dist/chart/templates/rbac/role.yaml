@@ -18,6 +18,7 @@ rules:
 - apiGroups:
   - gate.sh
   resources:
+  - clustergates
   - gates
   verbs:
   - create
@@ -30,12 +31,14 @@ rules:
 - apiGroups:
   - gate.sh
   resources:
+  - clustergates/finalizers
   - gates/finalizers
   verbs:
   - update
 - apiGroups:
   - gate.sh
   resources:
+  - clustergates/status
   - gates/status
   verbs:
   - get
