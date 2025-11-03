@@ -106,3 +106,27 @@ status:
     type: KubeProxy
 ```
 
+## Installation with ArgoCD
+
+You need to add the following snippet to your argocd cm
+
+```yaml
+resource.customizations:
+  "gate.sh/*":
+      health.lua: |
+        hs = {}
+        if obj.status ~= nil then
+          if obj.status.conditions ~= nil then
+            for i, condition in ipairs(obj.status.conditions) do
+              if condition.type == "Opened" and condition.status == "True" then
+                hs.status = "Healthy"
+                hs.message = condition.message
+                return hs
+              end
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Waiting for the gate to open"
+        return hs
+```
