@@ -19,4 +19,11 @@ resources:
   kind: Gate
   path: github.com/robinlioret/gate-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: gate.sh
+  kind: ClusterGate
+  path: github.com/robinlioret/gate-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"
