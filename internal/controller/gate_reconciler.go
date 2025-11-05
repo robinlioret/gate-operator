@@ -180,27 +180,30 @@ func (g *GateCommonReconciler) EvaluateTargetObjectCondition(
 }
 
 func (g *GateCommonReconciler) ComputeOperation(targetConditions []metav1.Condition) bool {
+	var result bool
 	switch g.Gate.Spec.Operation.Operator {
 	case gateshv1alpha1.GateOperatorOr:
+		result = false
 		for _, targetCondition := range targetConditions {
 			if targetCondition.Status == metav1.ConditionTrue {
-				// logf.FromContext(ctx).Info("Or operation to true")
-				return true
+				result = true
+				break
 			}
 		}
-		// logf.FromContext(ctx).Info("Or operation to false")
-		return false
 
 	default: // And
+		result = true
 		for _, targetCondition := range targetConditions {
 			if targetCondition.Status != metav1.ConditionTrue {
-				// logf.FromContext(ctx).Info(fmt.Sprintf("And operation to false (%s)", targetCondition.Type))
-				return false
+				result = false
+				break
 			}
 		}
-		// logf.FromContext(ctx).Info("And operation to true")
-		return true
 	}
+	if g.Gate.Spec.Operation.Invert {
+		result = !result
+	}
+	return result
 }
 
 // FetchGateTargetObjects retrieves Kubernetes objects based on the GateTarget specification.

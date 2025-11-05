@@ -55,6 +55,10 @@ spec:
                 description: Indicates how to combine the targets results. By default,
                   they will simply be anded.
                 properties:
+                  invert:
+                    default: false
+                    description: If true, will invert the result of the Gate
+                    type: boolean
                   operator:
                     default: And
                     description: Operation to perform. By default, it is "And".
@@ -372,6 +376,10 @@ spec:
                 description: Indicates how to combine the targets results. By default,
                   they will simply be anded.
                 properties:
+                  invert:
+                    default: false
+                    description: If true, will invert the result of the Gate
+                    type: boolean
                   operator:
                     default: And
                     description: Operation to perform. By default, it is "And".

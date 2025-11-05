@@ -36,7 +36,9 @@ type GateOperation struct {
 	// +default:value="And"
 	Operator GateOperator `json:"operator,omitempty"`
 
-	// TODO: add threshold, and other operations possibilities
+	// If true, will invert the result of the Gate
+	// +default:value=false
+	Invert bool `json:"invert,omitempty"`
 }
 
 type GateTargetCondition struct {
