@@ -87,7 +87,11 @@ type GateTarget struct {
 	// +optional
 	DesiredCondition GateTargetCondition `json:"desiredCondition,omitempty"`
 
-	// TODO: add threshold, and other operations possibilities
+	// When selecting targets by labels, this validates the conditions if N or more objects validates the condition.
+	// By default, disabled (0)
+	// +optional
+	// +default:value=0
+	AtLeast int `json:"atLeast,omitempty"`
 }
 
 // GateSpec defines the desired state of Gate

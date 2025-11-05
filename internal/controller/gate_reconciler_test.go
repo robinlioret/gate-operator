@@ -51,7 +51,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deploy1",
 			Namespace: "default",
-			Labels:    map[string]string{"app": "test1"},
+			Labels:    map[string]string{"app": "test1", "app2": "test2"},
 		},
 		Status: appsv1.DeploymentStatus{
 			ObservedGeneration: 1,
@@ -77,7 +77,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deploy3",
 			Namespace: "default",
-			Labels:    map[string]string{"app": "test1"},
+			Labels:    map[string]string{"app": "test1", "app2": "test2"},
 		},
 		Status: appsv1.DeploymentStatus{
 			ObservedGeneration: 1,
@@ -104,9 +104,41 @@ var _ = Describe("Gate Common Reconciler", func() {
 			},
 		},
 	}
+	deploy5 := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deploy5",
+			Namespace: "default",
+			Labels:    map[string]string{"app2": "test2"},
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 1,
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+	deploy6 := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deploy6",
+			Namespace: "default",
+			Labels:    map[string]string{"app2": "test2"},
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 1,
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
 	client := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(cm1, deploy1, deploy2, deploy3, deploy4).
+		WithObjects(cm1, deploy1, deploy2, deploy3, deploy4, deploy5, deploy6).
 		Build()
 
 	// ================================================
@@ -398,6 +430,81 @@ var _ = Describe("Gate Common Reconciler", func() {
 			Expect(condition.Type).To(Equal("Target1"))
 			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			Expect(condition.Reason).To(Equal(ReasonKo))
+		})
+
+		It("Should evaluate to true a valid label selection target exist only", func() {
+			By("Calling the function EvaluateTarget")
+			target := gateshv1alpha1.GateTarget{
+				TargetName:    "Target1",
+				Kind:          "Deployment",
+				ApiVersion:    "apps/v1",
+				Namespace:     "default",
+				ExistsOnly:    true,
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
+			}
+			condition := gcr.EvaluateTarget(&target)
+			AddReportEntry("Condition", condition)
+			Expect(condition.Type).To(Equal("Target1"))
+			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			Expect(condition.Reason).To(Equal(ReasonOkObjectsFound))
+		})
+
+		It("Should evaluate to true a valid label selection target exist only using atleast", func() {
+			By("Calling the function EvaluateTarget")
+			target := gateshv1alpha1.GateTarget{
+				TargetName:    "Target1",
+				Kind:          "Deployment",
+				ApiVersion:    "apps/v1",
+				Namespace:     "default",
+				ExistsOnly:    true,
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
+				AtLeast:       2,
+			}
+			condition := gcr.EvaluateTarget(&target)
+			AddReportEntry("Condition", condition)
+			Expect(condition.Type).To(Equal("Target1"))
+			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			Expect(condition.Reason).To(Equal(ReasonOkObjectsFound))
+		})
+
+		It("Should evaluate to false an invalid label selection target exist only using atleast", func() {
+			By("Calling the function EvaluateTarget")
+			target := gateshv1alpha1.GateTarget{
+				TargetName:    "Target1",
+				Kind:          "Deployment",
+				ApiVersion:    "apps/v1",
+				Namespace:     "default",
+				ExistsOnly:    true,
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
+				AtLeast:       100,
+			}
+			condition := gcr.EvaluateTarget(&target)
+			AddReportEntry("Condition", condition)
+			Expect(condition.Type).To(Equal("Target1"))
+			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			Expect(condition.Reason).To(Equal(ReasonKoNotEnoughObjectsFound))
+		})
+
+		It("Should evaluate to true a valid label selection target exist only using atleast", func() {
+			By("Calling the function EvaluateTarget")
+			target := gateshv1alpha1.GateTarget{
+				TargetName:    "Target1",
+				Kind:          "Deployment",
+				ApiVersion:    "apps/v1",
+				Namespace:     "default",
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app2": "test2"}},
+				AtLeast:       2,
+				ExistsOnly:    false,
+				DesiredCondition: gateshv1alpha1.GateTargetCondition{
+					Type:   "Available",
+					Status: "True",
+				},
+			}
+			condition := gcr.EvaluateTarget(&target)
+			AddReportEntry("Condition", condition)
+			Expect(condition.Type).To(Equal("Target1"))
+			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			Expect(condition.Reason).To(Equal(ReasonOk))
 		})
 	})
 
