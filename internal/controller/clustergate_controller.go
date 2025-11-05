@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,23 +62,29 @@ func (r *ClusterGateReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Do not evaluate if it was updated too recently
-	// if gate.Status.NextEvaluation.After(time.Now()) {
-	//	log.V(1).Info("Gate was already processed recently")
-	//	return ctrl.Result{RequeueAfter: gate.Status.NextEvaluation.Sub(time.Now())}, nil
-	// }
-
-	gateReconciler := GateReconciler{Client: r.Client, Scheme: r.Scheme}
-	result, targetConditions := gateReconciler.EvaluateGateSpec(ctx, gate.Namespace, gate.Spec)
-	gateReconciler.UpdateGateStatusFromResult(result, targetConditions, &gate.Status)
-
-	gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(gate.Spec.RequeueAfter.Duration)}
-	if err := r.Status().Update(ctx, &gate); err != nil {
-		log.Error(err, "unable to update ClusterGate")
+	gateObject := gateshv1alpha1.Gate{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Gate",
+			APIVersion: gateshv1alpha1.GroupVersion.String(),
+		},
+		ObjectMeta: gate.ObjectMeta,
+		Spec:       gate.Spec,
+		Status:     gate.Status,
+	}
+	gcr := GateCommonReconciler{
+		Context: ctx,
+		Client:  r.Client,
+		Gate:    &gateObject,
+	}
+	err = gcr.Reconcile()
+	if err != nil {
+		log.Error(err, "unable to reconcile ClusterGate")
 		return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
 	}
-	log.V(1).Info("ClusterGate processed successfully")
-	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, nil
+	if err := r.Status().Update(ctx, &gate); err != nil {
+		log.Error(err, "unable to update ClusterGate")
+	}
+	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
 }
 
 // SetupWithManager sets up the controller with the Manager.
