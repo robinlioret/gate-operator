@@ -36,7 +36,7 @@ type GateOperation struct {
 	// +default:value="And"
 	Operator GateOperator `json:"operator,omitempty"`
 
-	// TODO: add threshold, and other operations possibilties
+	// TODO: add threshold, and other operations possibilities
 }
 
 type GateTargetCondition struct {
@@ -87,7 +87,7 @@ type GateTarget struct {
 	// +optional
 	DesiredCondition GateTargetCondition `json:"desiredCondition,omitempty"`
 
-	// TODO: add threshold, and other operations possibilties
+	// TODO: add threshold, and other operations possibilities
 }
 
 // GateSpec defines the desired state of Gate
