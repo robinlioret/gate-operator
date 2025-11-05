@@ -2,15 +2,17 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
-	"github.com/robinlioret/gate-operator/internal"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -30,9 +32,9 @@ const ReasonOk = "ConditionMet"
 const ReasonKo = "ConditionNotMet"
 
 type GateCommonReconciler struct {
-	context.Context
-	client.Client
-	*gateshv1alpha1.Gate
+	Context context.Context
+	Client  client.Client
+	Gate    *gateshv1alpha1.Gate
 }
 
 type TargetObjectResult struct {
@@ -74,14 +76,8 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 		closedCondition = metav1.ConditionTrue
 	}
 
-	// Opened conditions
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateOpened, Status: openedCondition, Reason: reason, Message: message})
-	//meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: "Available", Status: openedCondition, Reason: reason, Message: message})
-
-	// Closed conditions
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateClosed, Status: closedCondition, Reason: reason, Message: message})
-	//meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: "Progressing", Status: closedCondition, Reason: reason, Message: message})
-
 	g.Gate.Status.TargetConditions = targetConditions
 }
 
@@ -97,7 +93,7 @@ func (g *GateCommonReconciler) EvaluateSpec() (bool, []metav1.Condition) {
 func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget) metav1.Condition {
 	log := logf.FromContext(g.Context)
 
-	objects, err := internal.FetchGateTargetObjects(g.Context, g.Client, target, g.Gate.Namespace)
+	objects, err := g.FetchGateTargetObjects(target)
 	if err != nil {
 		log.Error(err, "unable to fetch target objects")
 		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonErrorWhileFetching, Message: fmt.Sprintf(MessageErrorWhileFetching, err.Error())}
@@ -143,7 +139,7 @@ func (g *GateCommonReconciler) EvaluateTargetObjectCondition(
 	object unstructured.Unstructured,
 	target *gateshv1alpha1.GateTarget,
 ) TargetObjectResult {
-	conditions, err := internal.GetObjectStatusConditions(&object)
+	conditions, err := g.GetObjectStatusConditions(&object)
 	if err != nil {
 		return TargetObjectResult{Result: false, Message: fmt.Sprintf("error while fetching object conditions: %s", err.Error())}
 	}
@@ -186,4 +182,139 @@ func (g *GateCommonReconciler) ComputeOperation(targetConditions []metav1.Condit
 		// logf.FromContext(ctx).Info("And operation to true")
 		return true
 	}
+}
+
+// FetchGateTargetObjects retrieves Kubernetes objects based on the GateTarget specification.
+// It handles both Name-based and LabelSelector-based lookups and returns a slice of unstructured objects.
+func (g *GateCommonReconciler) FetchGateTargetObjects(gateTarget *gateshv1alpha1.GateTarget) ([]unstructured.Unstructured, error) {
+	// Determine the namespace to use
+	namespace := gateTarget.Namespace
+	if namespace == "" {
+		namespace = g.Gate.Namespace
+	}
+
+	// Create GroupVersionKind for the target resource
+	gvk := schema.GroupVersionKind{
+		Group:   "", // Will be set based on ApiVersion
+		Version: gateTarget.ApiVersion,
+		Kind:    gateTarget.Kind,
+	}
+
+	// Parse Group and Version from ApiVersion
+	gv, err := schema.ParseGroupVersion(gateTarget.ApiVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ApiVersion %s: %w", gateTarget.ApiVersion, err)
+	}
+	gvk.Group = gv.Group
+	gvk.Version = gv.Version
+
+	// Validate that either Name or LabelSelector is set, but not both
+	if gateTarget.Name != "" && !g.IsLabelSelectorEmpty(gateTarget.LabelSelector) {
+		return nil, fmt.Errorf("name and labelSelector are mutually exclusive in GateTarget %s", gateTarget.TargetName)
+	}
+	if gateTarget.Name == "" && g.IsLabelSelectorEmpty(gateTarget.LabelSelector) {
+		return nil, fmt.Errorf("either name or labelSelector must be specified in GateTarget %s", gateTarget.TargetName)
+	}
+
+	var objects []unstructured.Unstructured
+
+	if gateTarget.Name != "" {
+		// Case 1: Fetch by Name
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(gvk)
+		err := g.Client.Get(g.Context, client.ObjectKey{
+			Namespace: namespace,
+			Name:      gateTarget.Name,
+		}, obj)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return objects, nil // Return empty slice if not found
+			}
+			return nil, fmt.Errorf("failed to get object %s/%s: %w", namespace, gateTarget.Name, err)
+		}
+		objects = append(objects, *obj)
+	} else {
+		// Case 2: Fetch by LabelSelector
+		selector, err := metav1.LabelSelectorAsSelector(&gateTarget.LabelSelector)
+		if err != nil {
+			return nil, fmt.Errorf("invalid label selector in GateTarget %s: %w", gateTarget.TargetName, err)
+		}
+
+		// Create a list to hold the results
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   gvk.Group,
+			Version: gvk.Version,
+			Kind:    gvk.Kind + "List", // Append "List" for the list kind
+		})
+
+		// List options with the label selector
+		listOptions := &client.ListOptions{
+			Namespace:     namespace,
+			LabelSelector: selector,
+		}
+
+		// Fetch the list of objects
+		err = g.Client.List(g.Context, list, listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list objects for GateTarget %s: %w", gateTarget.TargetName, err)
+		}
+
+		objects = append(objects, list.Items...)
+	}
+
+	return objects, nil
+}
+
+// IsLabelSelectorEmpty checks if the LabelSelector is empty
+func (g *GateCommonReconciler) IsLabelSelectorEmpty(selector metav1.LabelSelector) bool {
+	return len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0
+}
+
+func (g *GateCommonReconciler) GetObjectStatusConditions(obj client.Object) ([]metav1.Condition, error) {
+	unstrObj, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("expected unstructured.Unstructured, got %T", obj)
+	}
+
+	status, found, err := unstructured.NestedMap(unstrObj.Object, "status")
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil // No status field; return empty slice
+	}
+
+	// Extract the conditions field from status
+	conditions, found, err := unstructured.NestedSlice(status, "conditions")
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil // No conditions field; return empty slice
+	}
+
+	conditionList := []metav1.Condition{}
+	for _, cond := range conditions {
+		condition, ok := cond.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Marshal the condition map to JSON
+		condBytes, err := json.Marshal(condition)
+		if err != nil {
+			continue
+		}
+
+		// Unmarshal into metav1.Condition
+		var metaCond metav1.Condition
+		if err := json.Unmarshal(condBytes, &metaCond); err != nil {
+			continue
+		}
+
+		conditionList = append(conditionList, metaCond)
+	}
+
+	return conditionList, nil
 }

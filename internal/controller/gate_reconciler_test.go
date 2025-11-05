@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,6 +51,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deploy1",
 			Namespace: "default",
+			Labels:    map[string]string{"app": "test1"},
 		},
 		Status: appsv1.DeploymentStatus{
 			ObservedGeneration: 1,
@@ -75,6 +77,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deploy3",
 			Namespace: "default",
+			Labels:    map[string]string{"app": "test1"},
 		},
 		Status: appsv1.DeploymentStatus{
 			ObservedGeneration: 1,
@@ -116,7 +119,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 			Gate:    &gateshv1alpha1.Gate{},
 		}
 		obj := unstructured.Unstructured{
-			map[string]interface{}{
+			Object: map[string]interface{}{
 				"apiVersion": "v1",
 				"kind":       "Dummy",
 				"metadata": map[string]interface{}{
@@ -131,6 +134,36 @@ var _ = Describe("Gate Common Reconciler", func() {
 			By("Calling the function GetObjectName")
 			result := gcr.GetObjectName(obj)
 			Expect(result).To(Equal("some-namespace/a-name"))
+		})
+	})
+
+	Context("IsLabelSelectorEmpty", func() {
+		gcr := &GateCommonReconciler{
+			Client:  client,
+			Context: context.Background(),
+			Gate:    &gateshv1alpha1.Gate{},
+		}
+
+		It("Should detect empty label selector", func() {
+			By("Calling the function IsLabelSelectorEmpty")
+			result := gcr.IsLabelSelectorEmpty(metav1.LabelSelector{})
+			Expect(result).To(BeTrue())
+		})
+
+		It("Should detect specified label selector", func() {
+			var result bool
+
+			By("Calling the function IsLabelSelectorEmpty with ")
+			result = gcr.IsLabelSelectorEmpty(metav1.LabelSelector{MatchLabels: map[string]string{"abc": "def"}})
+			Expect(result).To(BeFalse())
+
+			By("Calling the function IsLabelSelectorEmpty")
+			result = gcr.IsLabelSelectorEmpty(metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "abc",
+				Operator: "In",
+				Values:   []string{"def"},
+			}}})
+			Expect(result).To(BeFalse())
 		})
 	})
 
@@ -149,9 +182,9 @@ var _ = Describe("Gate Common Reconciler", func() {
 			By("Creating a fake Gate Common reconciler")
 			By("Creating a set of target conditions")
 			targetConditions := []metav1.Condition{
-				metav1.Condition{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				metav1.Condition{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				metav1.Condition{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
 			}
 			By("Calling the function ComputeOperation")
 			result := gcr.ComputeOperation(targetConditions)
@@ -161,9 +194,9 @@ var _ = Describe("Gate Common Reconciler", func() {
 		It("Should evaluate an invalid AND condition to false", func() {
 			By("Creating a set of target conditions")
 			targetConditions := []metav1.Condition{
-				metav1.Condition{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				metav1.Condition{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				metav1.Condition{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
 			}
 			By("Calling the function ComputeOperation")
 			result := gcr.ComputeOperation(targetConditions)
@@ -185,9 +218,9 @@ var _ = Describe("Gate Common Reconciler", func() {
 		It("Should evaluate a valid OR condition to true", func() {
 			By("Creating a set of target conditions")
 			targetConditions := []metav1.Condition{
-				metav1.Condition{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				metav1.Condition{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				metav1.Condition{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
 			}
 			By("Calling the function ComputeOperation")
 			result := gcr.ComputeOperation(targetConditions)
@@ -197,9 +230,9 @@ var _ = Describe("Gate Common Reconciler", func() {
 		It("Should evaluate an invalid OR condition to false", func() {
 			By("Creating a set of target conditions")
 			targetConditions := []metav1.Condition{
-				metav1.Condition{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				metav1.Condition{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				metav1.Condition{Type: "target3", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target3", Status: metav1.ConditionFalse, Reason: "", Message: ""},
 			}
 			By("Calling the function ComputeOperation")
 			result := gcr.ComputeOperation(targetConditions)
@@ -220,8 +253,8 @@ var _ = Describe("Gate Common Reconciler", func() {
 
 		It("Should successfully update the gate status", func() {
 			targetConditions := []metav1.Condition{
-				metav1.Condition{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				metav1.Condition{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
 			}
 
 			By("Updating the gate status when result is true")
@@ -403,8 +436,120 @@ var _ = Describe("Gate Common Reconciler", func() {
 		It("Should evaluate a valid target", func() {
 			result, conditions := gcr.EvaluateSpec()
 			AddReportEntry("Condition", conditions)
-			Expect(result).To(Equal(true))
+			Expect(result).To(BeTrue())
 			Expect(conditions).To(HaveLen(2))
+		})
+	})
+
+	Context("Test FetchGateTargetObjects", func() {
+		gcr := &GateCommonReconciler{
+			Client:  client,
+			Context: context.Background(),
+			Gate: &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gate-1",
+				},
+			},
+		}
+
+		It("Should fetch existing target objects", func() {
+			var result []unstructured.Unstructured
+			var err error
+			By("Fetching target by name in the gate namespace")
+			result, err = gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
+				TargetName: "Target1",
+				Kind:       "Deployment",
+				ApiVersion: "apps/v1",
+				Name:       "deploy1",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveLen(1))
+
+			By("Fetching target by label in the gate namespace")
+			result, err = gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
+				TargetName: "Target1",
+				Kind:       "Deployment",
+				ApiVersion: "apps/v1",
+				LabelSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{"app": "test1"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveLen(2))
+		})
+
+		It("Should fail if both name and label selector are specified", func() {
+			_, err := gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
+				TargetName:    "Target1",
+				Kind:          "Deployment",
+				ApiVersion:    "apps/v1",
+				Name:          "deploy1",
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
+			})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should fail if both name and label selector are missing", func() {
+			_, err := gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
+				TargetName: "Target1",
+				Kind:       "Deployment",
+				ApiVersion: "apps/v1",
+			})
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Context("Test GetObjectStatusConditions", func() {
+		gcr := &GateCommonReconciler{
+			Client:  client,
+			Context: context.Background(),
+			Gate:    &gateshv1alpha1.Gate{},
+		}
+
+		It("Should return nil if status is missing", func() {
+			result, err := gcr.GetObjectStatusConditions(&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "apps/v1",
+					"kind":       "Deployment",
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+	})
+
+	Context("Test Reconcile", func() {
+		gcr := &GateCommonReconciler{
+			Client:  client,
+			Context: context.Background(),
+			Gate: &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Spec: gateshv1alpha1.GateSpec{
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							TargetName: "Target1",
+							Kind:       "ConfigMap",
+							ApiVersion: "v1",
+							Namespace:  "default",
+							Name:       "cm1",
+							ExistsOnly: true,
+						},
+					},
+					Operation: gateshv1alpha1.GateOperation{
+						Operator: gateshv1alpha1.GateOperatorAnd,
+					},
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Second},
+				},
+			},
+		}
+		It("Should reconcile successfully", func() {
+			By("Calling Reconcile the target")
+			err := gcr.Reconcile()
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
