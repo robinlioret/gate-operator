@@ -43,6 +43,8 @@ type TargetObjectResult struct {
 }
 
 func (g *GateCommonReconciler) Reconcile() error {
+	log := logf.FromContext(g.Context)
+	log.Info(fmt.Sprintf("Start reconciling %s %s", g.Gate.Kind, g.Gate.Name))
 	result, targetConditions := g.EvaluateSpec()
 	g.UpdateGateStatusFromResult(result, targetConditions)
 	g.Gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(g.Gate.Spec.RequeueAfter.Duration)}
