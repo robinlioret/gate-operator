@@ -69,6 +69,12 @@ spec:
                     apiVersion:
                       description: ApiVersion of the resource(s) to target
                       type: string
+                    atLeast:
+                      default: 0
+                      description: |-
+                        When selecting targets by labels, this validates the conditions if N or more objects validates the condition.
+                        By default, disabled (0)
+                      type: integer
                     desiredCondition:
                       description: DesiredCondition of the resources. By default,
                         will look for Available to be "True".

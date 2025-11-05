@@ -30,6 +30,8 @@ const ReasonKoNoObjectsFound = "NoObjectsFound"
 const MessageKoNoObjectFound = "no object found"
 const ReasonOk = "ConditionMet"
 const ReasonKo = "ConditionNotMet"
+const ReasonKoNotEnoughObjectsFound = "NotEnoughObjectsFound"
+const MessageObjectsFoundOverObjectRequires = "%d object(s) found, %d required, %d are valid"
 
 type GateCommonReconciler struct {
 	Context context.Context
@@ -105,6 +107,10 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonKoNoObjectsFound, Message: MessageKoNoObjectFound}
 	}
 
+	if len(objects) < target.AtLeast {
+		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonKoNotEnoughObjectsFound, Message: fmt.Sprintf(MessageObjectsFoundOverObjectRequires, len(objects), target.AtLeast, len(objects))}
+	}
+
 	if target.ExistsOnly {
 		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionTrue, Reason: ReasonOkObjectsFound, Message: fmt.Sprintf(MessageOkObjectsFound, len(objects))}
 	}
@@ -114,7 +120,7 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 		objectResults[g.GetObjectName(object)] = g.EvaluateTargetObjectCondition(object, target)
 	}
 
-	finalResult, message := g.ComputeTargetResult(objects, objectResults)
+	finalResult, message := g.ComputeTargetResult(objects, objectResults, target)
 	if finalResult {
 		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionTrue, Reason: ReasonOk, Message: message}
 	} else {
@@ -125,14 +131,25 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 func (g *GateCommonReconciler) ComputeTargetResult(
 	objects []unstructured.Unstructured,
 	objectResults map[string]TargetObjectResult,
+	target *gateshv1alpha1.GateTarget,
 ) (bool, string) {
-	finalResult := true
-	message := []string{fmt.Sprintf(MessageOkObjectsFound, len(objects))}
+	countTrue := 0
+	var message []string
 	for objName, result := range objectResults {
-		if !result.Result {
+		if result.Result {
+			countTrue++
+		} else {
 			message = append(message, fmt.Sprintf(MessageObjectResult, objName, result.Message))
-			finalResult = false
 		}
+	}
+
+	var finalResult bool
+	if target.AtLeast > 0 {
+		message = append(message, fmt.Sprintf(MessageObjectsFoundOverObjectRequires, len(objectResults), target.AtLeast, countTrue))
+		finalResult = countTrue >= target.AtLeast
+	} else {
+		finalResult = len(objectResults) == countTrue
+		message = append(message, fmt.Sprintf(MessageOkObjectsFound, len(objects)))
 	}
 	return finalResult, strings.Join(message, MessageSeparator)
 }
