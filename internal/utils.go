@@ -30,7 +30,12 @@ import (
 
 // FetchGateTargetObjects retrieves Kubernetes objects based on the GateTarget specification.
 // It handles both Name-based and LabelSelector-based lookups and returns a slice of unstructured objects.
-func FetchGateTargetObjects(ctx context.Context, cl client.Client, gateTarget *gateshv1alpha1.GateTarget, defaultNamespace string) ([]unstructured.Unstructured, error) {
+func FetchGateTargetObjects(
+	ctx context.Context,
+	cl client.Client,
+	gateTarget *gateshv1alpha1.GateTarget,
+	defaultNamespace string,
+) ([]unstructured.Unstructured, error) {
 	// Determine the namespace to use
 	namespace := gateTarget.Namespace
 	if namespace == "" {

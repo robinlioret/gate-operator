@@ -18,15 +18,8 @@ package controller
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"time"
 
-	"github.com/robinlioret/gate-operator/internal"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,185 +62,20 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Do not evaluate if it was updated too recently
-	// if gate.Status.NextEvaluation.After(time.Now()) {
-	//	log.V(1).Info("Gate was already processed recently")
-	//	return ctrl.Result{RequeueAfter: gate.Status.NextEvaluation.Sub(time.Now())}, nil
-	// }
-
-	result, targetConditions := r.EvaluateGateSpec(ctx, gate.Namespace, gate.Spec)
-	r.UpdateGateStatusFromResult(result, targetConditions, &gate.Status)
-
-	gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(gate.Spec.RequeueAfter.Duration)}
-	if err := r.Status().Update(ctx, &gate); err != nil {
-		log.Error(err, "unable to update Gate")
+	gcr := GateCommonReconciler{
+		Context: ctx,
+		Client:  r.Client,
+		Gate:    &gate,
+	}
+	err = gcr.Reconcile()
+	if err != nil {
+		log.Error(err, "unable to reconcile Gate")
 		return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
 	}
-	log.V(1).Info("Gate processed successfully")
-	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, nil
-}
-
-func (r *GateReconciler) UpdateGateStatusFromResult(
-	result bool,
-	targetConditions []metav1.Condition,
-	status *gateshv1alpha1.GateStatus,
-) {
-	var message string
-	var reason string
-	var openedCondition metav1.ConditionStatus
-	var closedCondition metav1.ConditionStatus
-
-	if result {
-		status.State = gateshv1alpha1.GateStateOpened
-		message = "Gate was evaluated to true"
-		reason = "GateConditionMet"
-		openedCondition = metav1.ConditionTrue
-		closedCondition = metav1.ConditionFalse
-	} else {
-		status.State = gateshv1alpha1.GateStateClosed
-		message = "Gate was evaluated to false"
-		reason = "GateConditionNotMet"
-		openedCondition = metav1.ConditionFalse
-		closedCondition = metav1.ConditionTrue
+	if err := r.Status().Update(ctx, &gate); err != nil {
+		log.Error(err, "unable to update Gate")
 	}
-
-	// Opened conditions
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateOpened, Status: openedCondition, Reason: reason, Message: message})
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: "Available", Status: openedCondition, Reason: reason, Message: message})
-
-	// Closed conditions
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateClosed, Status: closedCondition, Reason: reason, Message: message})
-	meta.SetStatusCondition(&status.Conditions, metav1.Condition{Type: "Progressing", Status: closedCondition, Reason: reason, Message: message})
-
-	status.TargetConditions = targetConditions
-}
-
-func (r *GateReconciler) EvaluateGateSpec(
-	ctx context.Context,
-	namespace string,
-	gateSpec gateshv1alpha1.GateSpec,
-) (bool, []metav1.Condition) {
-	targetConditions := make([]metav1.Condition, 0)
-	for _, target := range gateSpec.Targets {
-		meta.SetStatusCondition(&targetConditions, r.EvaluateTarget(ctx, namespace, &target))
-	}
-	result := r.ComputeGateOperation(ctx, targetConditions, gateSpec.Operation)
-	return result, targetConditions
-}
-
-const MessageSeparator = "\n"
-const MessageObjectResult = "%s -> %s"
-
-type TargetConditionReason string
-
-const ReasonErrorWhileFetching = "ErrorWhileFetching"
-const MessageErrorWhileFetching = "not able to fetch target objects: %s"
-const ReasonOkObjectsFound = "ObjectsFound"
-const MessageOkObjectsFound = "%d object(s) found"
-const ReasonKoNoObjectsFound = "NoObjectsFound"
-const MessageKoNoObjectFound = "no object found"
-const ReasonOk = "ConditionMet"
-const ReasonKo = "ConditionNotMet"
-
-type TargetObjectResult struct {
-	Result  bool
-	Message string
-}
-
-func (r *GateReconciler) EvaluateTarget(ctx context.Context, namespace string, target *gateshv1alpha1.GateTarget) metav1.Condition {
-	log := logf.FromContext(ctx)
-
-	objects, err := internal.FetchGateTargetObjects(ctx, r.Client, target, namespace)
-	if err != nil {
-		log.Error(err, "unable to fetch target objects")
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonErrorWhileFetching, Message: fmt.Sprintf(MessageErrorWhileFetching, err.Error())}
-	}
-
-	if len(objects) == 0 {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonKoNoObjectsFound, Message: MessageKoNoObjectFound}
-	}
-
-	if target.ExistsOnly {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionTrue, Reason: ReasonOkObjectsFound, Message: fmt.Sprintf(MessageOkObjectsFound, len(objects))}
-	}
-
-	objectResults := make(map[string]TargetObjectResult)
-	for _, object := range objects {
-		objectResults[r.GetObjectName(object)] = r.EvaluateTargetObjectCondition(ctx, object, target)
-	}
-
-	finalResult, message := r.ComputeTargetResult(objects, objectResults)
-	if finalResult {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionTrue, Reason: ReasonOk, Message: message}
-	} else {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonKo, Message: message}
-	}
-}
-
-func (r *GateReconciler) ComputeTargetResult(objects []unstructured.Unstructured, objectResults map[string]TargetObjectResult) (bool, string) {
-	finalResult := true
-	message := []string{fmt.Sprintf(MessageOkObjectsFound, len(objects))}
-	for objName, result := range objectResults {
-		if !result.Result {
-			message = append(message, fmt.Sprintf(MessageObjectResult, objName, result.Message))
-			finalResult = false
-		}
-	}
-	return finalResult, strings.Join(message, MessageSeparator)
-}
-
-func (r *GateReconciler) EvaluateTargetObjectCondition(ctx context.Context, object unstructured.Unstructured, target *gateshv1alpha1.GateTarget) TargetObjectResult {
-	conditions, err := internal.GetObjectStatusConditions(&object)
-	if err != nil {
-		return TargetObjectResult{Result: false, Message: fmt.Sprintf("error while fetching object conditions: %s", err.Error())}
-	}
-
-	if len(conditions) == 0 {
-		return TargetObjectResult{Result: false, Message: "no conditions found"}
-	}
-
-	condition := meta.FindStatusCondition(conditions, target.DesiredCondition.Type)
-	if condition == nil {
-		return TargetObjectResult{Result: false, Message: "desired condition not found"}
-	}
-
-	if condition.Status != target.DesiredCondition.Status {
-		return TargetObjectResult{Result: false, Message: "desired condition status not equal"}
-	}
-
-	return TargetObjectResult{Result: true, Message: "condition matches"}
-}
-
-func (r *GateReconciler) GetObjectName(object unstructured.Unstructured) string {
-	return fmt.Sprintf("%s/%s", object.GetNamespace(), object.GetName())
-}
-
-func (r *GateReconciler) ComputeGateOperation(
-	ctx context.Context,
-	targetConditions []metav1.Condition,
-	operation gateshv1alpha1.GateOperation,
-) bool {
-	switch operation.Operator {
-	case gateshv1alpha1.GateOperatorOr:
-		for _, targetCondition := range targetConditions {
-			if targetCondition.Status == metav1.ConditionTrue {
-				// logf.FromContext(ctx).Info("Or operation to true")
-				return true
-			}
-		}
-		// logf.FromContext(ctx).Info("Or operation to false")
-		return false
-
-	default: // And
-		for _, targetCondition := range targetConditions {
-			if targetCondition.Status != metav1.ConditionTrue {
-				// logf.FromContext(ctx).Info(fmt.Sprintf("And operation to false (%s)", targetCondition.Type))
-				return false
-			}
-		}
-		// logf.FromContext(ctx).Info("And operation to true")
-		return true
-	}
+	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
 }
 
 // SetupWithManager sets up the controller with the Manager.
