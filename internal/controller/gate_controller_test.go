@@ -17,13 +17,78 @@ limitations under the License.
 package controller
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	schemeBuilder "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe("Gate Controller", func() {
+	scheme := runtime.NewScheme()
+	_ = schemeBuilder.AddToScheme(scheme)
+	_ = gateshv1alpha1.AddToScheme(scheme) // Add CRDs
+
+	gate1 := &gateshv1alpha1.Gate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gate1",
+			Namespace: "default",
+		},
+		Spec: gateshv1alpha1.GateSpec{
+			Targets: []gateshv1alpha1.GateTarget{
+				{
+					ApiVersion: "v1",
+					Kind:       "ConfigMap",
+					Namespace:  "default",
+					Name:       "cm1",
+					ExistsOnly: true,
+				},
+				{
+					ApiVersion: "apps/v1",
+					Kind:       "Deployment",
+					Namespace:  "default",
+					ExistsOnly: false,
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "test1",
+						},
+					},
+				},
+			},
+			Operation:    gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
+			RequeueAfter: &metav1.Duration{Duration: 10 * time.Second},
+		},
+	}
+	cm1 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm1",
+			Namespace: "default",
+		},
+	}
+	deploy1 := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deploy1",
+			Namespace: "default",
+			Labels:    map[string]string{"app": "test1"},
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 1,
+			Conditions:         []appsv1.DeploymentCondition{},
+		},
+	}
+	client := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gate1, cm1, deploy1).
+		Build()
+
 	Context("When reconciling a non-existing resource", func() {
 		typeNamespacedName := types.NamespacedName{
 			Name:      "non-existing-resource",
@@ -31,8 +96,29 @@ var _ = Describe("Gate Controller", func() {
 		}
 		It("Should not fail while reconcile the non-existing resource", func() {
 			By("Reconciling the non-existing resource")
-			controllerReconciler := &GateReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			reconciler := &GateReconciler{
+				Client: client,
+				Scheme: client.Scheme(),
+			}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("When reconciling a valid resource", func() {
+		typeNamespacedName := types.NamespacedName{
+			Name:      "gate1",
+			Namespace: "default",
+		}
+		It("Should not fail while reconcile the non-existing resource", func() {
+			By("Reconciling the non-existing resource")
+			reconciler := &GateReconciler{
+				Client: client,
+				Scheme: client.Scheme(),
+			}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
