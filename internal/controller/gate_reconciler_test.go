@@ -222,12 +222,39 @@ var _ = Describe("Gate Common Reconciler", func() {
 			result := gcr.ComputeOperation(targetConditions)
 			Expect(result).To(BeTrue())
 		})
+	})
 
-		It("Should evaluate an invalid AND condition to false", func() {
+	Context("Test ComputeOperation with the AND operator with invert", func() {
+		gcr := &GateCommonReconciler{
+			Client:  client,
+			Context: context.Background(),
+			Gate: &gateshv1alpha1.Gate{
+				Spec: gateshv1alpha1.GateSpec{
+					Operation: gateshv1alpha1.GateOperation{
+						Operator: gateshv1alpha1.GateOperatorAnd,
+						Invert:   true,
+					},
+				},
+			},
+		}
+
+		It("Should evaluate an invalid AND condition to true", func() {
 			By("Creating a set of target conditions")
 			targetConditions := []metav1.Condition{
 				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
 				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+			}
+			By("Calling the function ComputeOperation")
+			result := gcr.ComputeOperation(targetConditions)
+			Expect(result).To(BeTrue())
+		})
+
+		It("Should evaluate an valid AND condition to false", func() {
+			By("Creating a set of target conditions")
+			targetConditions := []metav1.Condition{
+				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
 				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
 			}
 			By("Calling the function ComputeOperation")
@@ -269,6 +296,45 @@ var _ = Describe("Gate Common Reconciler", func() {
 			By("Calling the function ComputeOperation")
 			result := gcr.ComputeOperation(targetConditions)
 			Expect(result).To(BeFalse())
+		})
+	})
+
+	Context("Test ComputeOperation with the OR operator with invert", func() {
+		gcr := &GateCommonReconciler{
+			Client:  client,
+			Context: context.Background(),
+			Gate: &gateshv1alpha1.Gate{
+				Spec: gateshv1alpha1.GateSpec{
+					Operation: gateshv1alpha1.GateOperation{
+						Operator: gateshv1alpha1.GateOperatorOr,
+						Invert:   true,
+					},
+				},
+			},
+		}
+
+		It("Should evaluate a valid OR condition to false", func() {
+			By("Creating a set of target conditions")
+			targetConditions := []metav1.Condition{
+				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
+			}
+			By("Calling the function ComputeOperation")
+			result := gcr.ComputeOperation(targetConditions)
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should evaluate an invalid OR condition to true", func() {
+			By("Creating a set of target conditions")
+			targetConditions := []metav1.Condition{
+				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+				{Type: "target3", Status: metav1.ConditionFalse, Reason: "", Message: ""},
+			}
+			By("Calling the function ComputeOperation")
+			result := gcr.ComputeOperation(targetConditions)
+			Expect(result).To(BeTrue())
 		})
 	})
 
@@ -653,6 +719,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 				},
 			},
 		}
+
 		It("Should reconcile successfully", func() {
 			By("Calling Reconcile the target")
 			err := gcr.Reconcile()
