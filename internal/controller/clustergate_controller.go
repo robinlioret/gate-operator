@@ -64,7 +64,7 @@ func (r *ClusterGateReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	gateObject := gateshv1alpha1.Gate{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Gate",
+			Kind:       "ClusterGate",
 			APIVersion: gateshv1alpha1.GroupVersion.String(),
 		},
 		ObjectMeta: gate.ObjectMeta,
@@ -77,6 +77,7 @@ func (r *ClusterGateReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		Gate:    &gateObject,
 	}
 	err = gcr.Reconcile()
+	gate.Status = gateObject.Status
 	if err != nil {
 		log.Error(err, "unable to reconcile ClusterGate")
 		return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
