@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -30,7 +29,7 @@ var DefaultTargetValidators = []gateshv1alpha1.GateTargetValidator{{AtLeast: 1}}
 var DefaultOperation = gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd}
 var DefaultMatchConditionStatus = metav1.ConditionTrue
 
-func ApplyDefaultSpec(log logr.Logger, spec *gateshv1alpha1.GateSpec) {
+func ApplyDefaultSpec(spec *gateshv1alpha1.GateSpec) {
 	if spec.RequeueAfter == nil {
 		spec.RequeueAfter = DefaultRequeueAfter
 	}

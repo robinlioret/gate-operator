@@ -62,7 +62,7 @@ func (d *ClusterGateCustomDefaulter) Default(_ context.Context, obj runtime.Obje
 		return fmt.Errorf("expected an ClusterGate object but got %T", obj)
 	}
 	clustergatelog.Info("Defaulting for ClusterGate", "name", clustergate.GetName())
-	ApplyDefaultSpec(clustergatelog, &clustergate.Spec)
+	ApplyDefaultSpec(&clustergate.Spec)
 	return nil
 }
 
@@ -76,9 +76,7 @@ func (d *ClusterGateCustomDefaulter) Default(_ context.Context, obj runtime.Obje
 //
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as this struct is used only for temporary operations and does not need to be deeply copied.
-type ClusterGateCustomValidator struct {
-	// TODO(user): Add more fields as needed for validation
-}
+type ClusterGateCustomValidator struct{}
 
 var _ webhook.CustomValidator = &ClusterGateCustomValidator{}
 
@@ -89,10 +87,7 @@ func (v *ClusterGateCustomValidator) ValidateCreate(_ context.Context, obj runti
 		return nil, fmt.Errorf("expected a ClusterGate object but got %T", obj)
 	}
 	clustergatelog.Info("Validation for ClusterGate upon creation", "name", clustergate.GetName())
-
-	// TODO(user): fill in your validation logic upon object creation.
-
-	return nil, nil
+	return ValidateGateSpec(&clustergate.Spec)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type ClusterGate.
@@ -102,10 +97,7 @@ func (v *ClusterGateCustomValidator) ValidateUpdate(_ context.Context, oldObj, n
 		return nil, fmt.Errorf("expected a ClusterGate object for the newObj but got %T", newObj)
 	}
 	clustergatelog.Info("Validation for ClusterGate upon update", "name", clustergate.GetName())
-
-	// TODO(user): fill in your validation logic upon object update.
-
-	return nil, nil
+	return ValidateGateSpec(&clustergate.Spec)
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type ClusterGate.

@@ -62,7 +62,7 @@ func (d *GateCustomDefaulter) Default(_ context.Context, obj runtime.Object) err
 		return fmt.Errorf("expected an Gate object but got %T", obj)
 	}
 	gatelog.Info("Defaulting for Gate", "name", gate.GetName())
-	ApplyDefaultSpec(gatelog, &gate.Spec)
+	ApplyDefaultSpec(&gate.Spec)
 	return nil
 }
 
@@ -76,9 +76,7 @@ func (d *GateCustomDefaulter) Default(_ context.Context, obj runtime.Object) err
 //
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as this struct is used only for temporary operations and does not need to be deeply copied.
-type GateCustomValidator struct {
-	// TODO(user): Add more fields as needed for validation
-}
+type GateCustomValidator struct{}
 
 var _ webhook.CustomValidator = &GateCustomValidator{}
 
@@ -89,10 +87,7 @@ func (v *GateCustomValidator) ValidateCreate(_ context.Context, obj runtime.Obje
 		return nil, fmt.Errorf("expected a Gate object but got %T", obj)
 	}
 	gatelog.Info("Validation for Gate upon creation", "name", gate.GetName())
-
-	// TODO(user): fill in your validation logic upon object creation.
-
-	return nil, nil
+	return ValidateGateSpec(&gate.Spec)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type Gate.
@@ -102,10 +97,7 @@ func (v *GateCustomValidator) ValidateUpdate(_ context.Context, oldObj, newObj r
 		return nil, fmt.Errorf("expected a Gate object for the newObj but got %T", newObj)
 	}
 	gatelog.Info("Validation for Gate upon update", "name", gate.GetName())
-
-	// TODO(user): fill in your validation logic upon object update.
-
-	return nil, nil
+	return ValidateGateSpec(&gate.Spec)
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type Gate.
