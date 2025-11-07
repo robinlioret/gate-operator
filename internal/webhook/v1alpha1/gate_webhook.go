@@ -36,15 +36,17 @@ import (
 // log is for logging in this package.
 var gatelog = logf.Log.WithName("gate-resource")
 
+var GateDefaulter = GateCustomDefaulter{
+	DefaultRequeueAfter:     &metav1.Duration{Duration: 60 * time.Second},
+	DefaultTargetValidators: []gateshv1alpha1.GateTargetValidator{{AtLeast: 1}},
+	DefaultOperation:        gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
+}
+
 // SetupGateWebhookWithManager registers the webhook for Gate in the manager.
 func SetupGateWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).For(&gateshv1alpha1.Gate{}).
 		WithValidator(&GateCustomValidator{}).
-		WithDefaulter(&GateCustomDefaulter{
-			DefaultRequeueAfter:     &metav1.Duration{Duration: 60 * time.Second},
-			DefaultTargetValidators: []gateshv1alpha1.GateTargetValidator{{AtLeast: 1}},
-			DefaultOperation:        gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
-		}).
+		WithDefaulter(&GateDefaulter).
 		Complete()
 }
 

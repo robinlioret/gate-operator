@@ -99,7 +99,7 @@ type GateTarget struct {
 	// Name of the target. Must be PascalCase. This will be used to make the matching target condition humanly
 	// identifiable. Name will be inferred if not specified.
 	// +optional
-	//// +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
+	// // +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
 	Name string `json:"name"`
 
 	// Selector
