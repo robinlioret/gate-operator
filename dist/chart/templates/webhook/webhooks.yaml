@@ -11,6 +11,26 @@ metadata:
   labels:
     {{- include "chart.labels" . | nindent 4 }}
 webhooks:
+  - name: mclustergate-v1alpha1.kb.io
+    clientConfig:
+      service:
+        name: gate-operator-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-gate-sh-v1alpha1-clustergate
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - gate.sh
+        apiVersions:
+          - v1alpha1
+        resources:
+          - clustergates
   - name: mgate-v1alpha1.kb.io
     clientConfig:
       service:
@@ -44,6 +64,26 @@ metadata:
   labels:
     {{- include "chart.labels" . | nindent 4 }}
 webhooks:
+  - name: vclustergate-v1alpha1.kb.io
+    clientConfig:
+      service:
+        name: gate-operator-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-gate-sh-v1alpha1-clustergate
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - gate.sh
+        apiVersions:
+          - v1alpha1
+        resources:
+          - clustergates
   - name: vgate-v1alpha1.kb.io
     clientConfig:
       service:
