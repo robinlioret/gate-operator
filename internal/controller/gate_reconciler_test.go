@@ -423,7 +423,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 				Namespace:  "default",
 				Name:       "deploy1",
 				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetCondition{
+				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
 					Type:   "Available",
 					Status: "True",
 				},
@@ -444,7 +444,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 				Namespace:  "default",
 				Name:       "deploy2",
 				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetCondition{
+				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
 					Type:   "Available",
 					Status: "True",
 				},
@@ -465,7 +465,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 				Namespace:  "default",
 				Name:       "deploy3",
 				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetCondition{
+				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
 					Type:   "Available",
 					Status: "True",
 				},
@@ -486,7 +486,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 				Namespace:  "default",
 				Name:       "deploy4",
 				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetCondition{
+				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
 					Type:   "Available",
 					Status: "True",
 				},
@@ -561,7 +561,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app2": "test2"}},
 				AtLeast:       2,
 				ExistsOnly:    false,
-				DesiredCondition: gateshv1alpha1.GateTargetCondition{
+				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
 					Type:   "Available",
 					Status: "True",
 				},
@@ -588,7 +588,7 @@ var _ = Describe("Gate Common Reconciler", func() {
 							Namespace:  "default",
 							Name:       "deploy2",
 							ExistsOnly: false,
-							DesiredCondition: gateshv1alpha1.GateTargetCondition{
+							DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
 								Type:   "Available",
 								Status: "True",
 							},
