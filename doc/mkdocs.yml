@@ -59,4 +59,5 @@ nav:
   - index.md
   - Get Started: get-started.md
   - Patterns: patterns.md
-  - Examples: examples.md
+  - Reference: reference.md
+  # - Examples: examples.md
