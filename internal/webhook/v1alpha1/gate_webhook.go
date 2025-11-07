@@ -19,10 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,11 +37,7 @@ var gatelog = logf.Log.WithName("gate-resource")
 func SetupGateWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).For(&gateshv1alpha1.Gate{}).
 		WithValidator(&GateCustomValidator{}).
-		WithDefaulter(&GateCustomDefaulter{
-			DefaultRequeueAfter:     &metav1.Duration{Duration: 60 * time.Second},
-			DefaultTargetValidators: []gateshv1alpha1.GateTargetValidator{{AtLeast: 1}},
-			DefaultOperation:        gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
-		}).
+		WithDefaulter(&GateCustomDefaulter{}).
 		Complete()
 }
 
@@ -57,11 +50,7 @@ func SetupGateWebhookWithManager(mgr ctrl.Manager) error {
 //
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as it is used only for temporary operations and does not need to be deeply copied.
-type GateCustomDefaulter struct {
-	DefaultRequeueAfter     *metav1.Duration
-	DefaultTargetValidators []gateshv1alpha1.GateTargetValidator
-	DefaultOperation        gateshv1alpha1.GateOperation
-}
+type GateCustomDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &GateCustomDefaulter{}
 
@@ -73,25 +62,8 @@ func (d *GateCustomDefaulter) Default(_ context.Context, obj runtime.Object) err
 		return fmt.Errorf("expected an Gate object but got %T", obj)
 	}
 	gatelog.Info("Defaulting for Gate", "name", gate.GetName())
-	d.ApplyDefault(&gate.Spec)
+	ApplyDefaultSpec(gatelog, &gate.Spec)
 	return nil
-}
-
-func (d *GateCustomDefaulter) ApplyDefault(spec *gateshv1alpha1.GateSpec) {
-	if spec.RequeueAfter == nil {
-		spec.RequeueAfter = d.DefaultRequeueAfter
-	}
-	for idx := range spec.Targets {
-		if spec.Targets[idx].Name == "" {
-			spec.Targets[idx].Name = "Target" + strconv.Itoa(idx+1)
-		}
-		if len(spec.Targets[idx].Validators) == 0 {
-			spec.Targets[idx].Validators = d.DefaultTargetValidators
-		}
-	}
-	if spec.Operation.Operator == "" {
-		spec.Operation = d.DefaultOperation
-	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

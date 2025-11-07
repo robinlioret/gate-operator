@@ -19,10 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,11 +37,7 @@ var clustergatelog = logf.Log.WithName("clustergate-resource")
 func SetupClusterGateWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).For(&gateshv1alpha1.ClusterGate{}).
 		WithValidator(&ClusterGateCustomValidator{}).
-		WithDefaulter(&ClusterGateCustomDefaulter{
-			DefaultRequeueAfter:     &metav1.Duration{Duration: 60 * time.Second},
-			DefaultTargetValidators: []gateshv1alpha1.GateTargetValidator{{AtLeast: 1}},
-			DefaultOperation:        gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
-		}).
+		WithDefaulter(&ClusterGateCustomDefaulter{}).
 		Complete()
 }
 
@@ -57,11 +50,7 @@ func SetupClusterGateWebhookWithManager(mgr ctrl.Manager) error {
 //
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as it is used only for temporary operations and does not need to be deeply copied.
-type ClusterGateCustomDefaulter struct {
-	DefaultRequeueAfter     *metav1.Duration
-	DefaultTargetValidators []gateshv1alpha1.GateTargetValidator
-	DefaultOperation        gateshv1alpha1.GateOperation
-}
+type ClusterGateCustomDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &ClusterGateCustomDefaulter{}
 
@@ -73,25 +62,8 @@ func (d *ClusterGateCustomDefaulter) Default(_ context.Context, obj runtime.Obje
 		return fmt.Errorf("expected an ClusterGate object but got %T", obj)
 	}
 	clustergatelog.Info("Defaulting for ClusterGate", "name", clustergate.GetName())
-	d.ApplyDefault(&clustergate.Spec)
+	ApplyDefaultSpec(clustergatelog, &clustergate.Spec)
 	return nil
-}
-
-func (d *ClusterGateCustomDefaulter) ApplyDefault(spec *gateshv1alpha1.GateSpec) {
-	if spec.RequeueAfter == nil {
-		spec.RequeueAfter = d.DefaultRequeueAfter
-	}
-	for idx := range spec.Targets {
-		if spec.Targets[idx].Name == "" {
-			spec.Targets[idx].Name = "Target" + strconv.Itoa(idx+1)
-		}
-		if len(spec.Targets[idx].Validators) == 0 {
-			spec.Targets[idx].Validators = d.DefaultTargetValidators
-		}
-	}
-	if spec.Operation.Operator == "" {
-		spec.Operation = d.DefaultOperation
-	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

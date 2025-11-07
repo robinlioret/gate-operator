@@ -1,0 +1,22 @@
+apiVersion: gate.sh/v1alpha1
+kind: ClusterGate
+metadata:
+  labels:
+    app.kubernetes.io/name: gate-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: clustergate-sample-2
+spec:
+  targets:
+    - selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        namespace: kube-system
+        name: coredns
+    - name: OtherClusterGate
+      selector:
+        apiVersion: gate.sh/v1alpha1
+        kind: ClusterGate
+        name: clustergate-sample-1
+      validators:
+        - matchCondition:
+            type: Opened
