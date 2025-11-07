@@ -91,7 +91,6 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 
 	var message []string
 	atLeast := -1
-	result := true
 	results := make([]bool, len(objects))
 	for i := range results {
 		results[i] = true
@@ -107,7 +106,7 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 		// Here add more validator logic
 	}
 
-	result, message = g.ComputeTargetEvaluationResult(atLeast, results, message)
+	result, message := g.ComputeTargetEvaluationResult(atLeast, results, message)
 	status := metav1.ConditionFalse
 	reason := "ConditionNotMet"
 	if result {
@@ -131,7 +130,7 @@ func (g *GateCommonReconciler) EvaluateTargetMatchCondition(objects []unstructur
 			continue
 		}
 
-		condition := meta.FindStatusCondition(objectConditions, string(validator.MatchCondition.Type))
+		condition := meta.FindStatusCondition(objectConditions, validator.MatchCondition.Type)
 		if condition == nil {
 			results[idx] = false
 			message = append(message, fmt.Sprintf("[%s] condition %s is missing", g.GetObjectName(object), validator.MatchCondition.Type))
