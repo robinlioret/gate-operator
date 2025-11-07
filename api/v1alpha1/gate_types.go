@@ -87,7 +87,7 @@ type GateTargetValidator struct {
 	// Validate the target if at least N objects matches other validator. If no validator are provided, will check if
 	// at least N object was found. If not specified alongside other validator, all found objects must match them.
 	// +optional
-	AtLeast uint `json:"atLeast,omitempty"`
+	AtLeast int `json:"atLeast,omitempty"`
 
 	// Desired condition of the resources.
 	// +optional

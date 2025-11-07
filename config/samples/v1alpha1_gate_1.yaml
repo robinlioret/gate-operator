@@ -6,10 +6,13 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: gate-sample-1
 spec:
+  requeueAfter: 60s
   targets:
-    - targetName: CoreDns
-      apiVersion: apps/v1
-      kind: Deployment
-      name: coredns
-      namespace: kube-system
-      existsOnly: true
+    - name: CoreDns
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: corednssdsdq
+        namespace: kube-system
+      validators:
+        - atLeast: 1

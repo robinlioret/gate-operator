@@ -17,21 +17,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const MessageSeparator = "\n"
-const MessageObjectResult = "%s -> %s"
-
 type TargetConditionReason string
-
-const ReasonErrorWhileFetching = "ErrorWhileFetching"
-const MessageErrorWhileFetching = "not able to fetch target objects: %s"
-const ReasonOkObjectsFound = "ObjectsFound"
-const MessageOkObjectsFound = "%d object(s) found"
-const ReasonKoNoObjectsFound = "NoObjectsFound"
-const MessageKoNoObjectFound = "no object found"
-const ReasonOk = "ConditionMet"
-const ReasonKo = "ConditionNotMet"
-const ReasonKoNotEnoughObjectsFound = "NotEnoughObjectsFound"
-const MessageObjectsFoundOverObjectRequires = "%d object(s) found, %d required, %d are valid"
 
 type GateCommonReconciler struct {
 	Context context.Context
@@ -100,83 +86,85 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 	objects, err := g.FetchGateTargetObjects(target)
 	if err != nil {
 		log.Error(err, "unable to fetch target objects")
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonErrorWhileFetching, Message: fmt.Sprintf(MessageErrorWhileFetching, err.Error())}
+		return metav1.Condition{Type: target.Name, Status: metav1.ConditionFalse, Reason: "ErrorWhileFetching", Message: fmt.Sprintf("not able to fetch target objects: %s", err.Error())}
 	}
 
-	if len(objects) == 0 {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonKoNoObjectsFound, Message: MessageKoNoObjectFound}
+	var message []string
+	atLeast := -1
+	result := true
+	results := make([]bool, len(objects))
+	for i := range results {
+		results[i] = true
 	}
 
-	if len(objects) < target.AtLeast {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonKoNotEnoughObjectsFound, Message: fmt.Sprintf(MessageObjectsFoundOverObjectRequires, len(objects), target.AtLeast, len(objects))}
+	for _, validator := range target.Validators {
+		if validator.AtLeast > 0 {
+			atLeast = validator.AtLeast
+		}
+		if validator.MatchCondition.Type != "" {
+			message = g.EvaluateTargetMatchCondition(objects, results, message, validator)
+		}
+		// Here add more validator logic
 	}
 
-	if target.ExistsOnly {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionTrue, Reason: ReasonOkObjectsFound, Message: fmt.Sprintf(MessageOkObjectsFound, len(objects))}
+	result, message = g.ComputeTargetEvaluationResult(atLeast, results, message)
+	status := metav1.ConditionFalse
+	reason := "ConditionNotMet"
+	if result {
+		status = metav1.ConditionTrue
+		reason = "ConditionMet"
 	}
-
-	objectResults := make(map[string]TargetObjectResult)
-	for _, object := range objects {
-		objectResults[g.GetObjectName(object)] = g.EvaluateTargetObjectCondition(object, target)
-	}
-
-	finalResult, message := g.ComputeTargetResult(objects, objectResults, target)
-	if finalResult {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionTrue, Reason: ReasonOk, Message: message}
-	} else {
-		return metav1.Condition{Type: target.TargetName, Status: metav1.ConditionFalse, Reason: ReasonKo, Message: message}
-	}
+	return metav1.Condition{Type: target.Name, Status: status, Reason: reason, Message: strings.Join(message, "\n")}
 }
 
-func (g *GateCommonReconciler) ComputeTargetResult(
-	objects []unstructured.Unstructured,
-	objectResults map[string]TargetObjectResult,
-	target *gateshv1alpha1.GateTarget,
-) (bool, string) {
-	countTrue := 0
-	var message []string
-	for objName, result := range objectResults {
-		if result.Result {
-			countTrue++
-		} else {
-			message = append(message, fmt.Sprintf(MessageObjectResult, objName, result.Message))
+func (g *GateCommonReconciler) EvaluateTargetMatchCondition(objects []unstructured.Unstructured, results []bool, message []string, validator gateshv1alpha1.GateTargetValidator) []string {
+	for idx, object := range objects {
+		objectConditions, err := g.GetObjectStatusConditions(&object)
+		if err != nil {
+			results[idx] = false
+			message = append(message, fmt.Sprintf("[%s] error while fetching condition %s: %s", g.GetObjectName(object), validator.MatchCondition.Type, err.Error()))
+			continue
+		}
+		if len(objectConditions) == 0 {
+			results[idx] = false
+			message = append(message, fmt.Sprintf("[%s] object doesn't have conditions", g.GetObjectName(object)))
+			continue
+		}
+
+		condition := meta.FindStatusCondition(objectConditions, string(validator.MatchCondition.Type))
+		if condition == nil {
+			results[idx] = false
+			message = append(message, fmt.Sprintf("[%s] condition %s is missing", g.GetObjectName(object), validator.MatchCondition.Type))
+			continue
+		}
+		if condition.Status != validator.MatchCondition.Status {
+			results[idx] = false
+			message = append(message, fmt.Sprintf("[%s] condition %s is wrong (expected %s, got %s)", g.GetObjectName(object), validator.MatchCondition.Type, string(validator.MatchCondition.Status), string(condition.Status)))
+			continue
+		}
+	}
+	return message
+}
+
+func (g *GateCommonReconciler) ComputeTargetEvaluationResult(atLeast int, results []bool, message []string) (bool, []string) {
+	objectsCount := len(results)
+	if atLeast <= 0 {
+		// If not specified, need at least one object or all the found objects to match.
+		atLeast = max(1, objectsCount)
+	}
+	count := 0
+	for _, result := range results {
+		if result {
+			count++
 		}
 	}
 
-	var finalResult bool
-	if target.AtLeast > 0 {
-		message = append(message, fmt.Sprintf(MessageObjectsFoundOverObjectRequires, len(objectResults), target.AtLeast, countTrue))
-		finalResult = countTrue >= target.AtLeast
-	} else {
-		finalResult = len(objectResults) == countTrue
-		message = append(message, fmt.Sprintf(MessageOkObjectsFound, len(objects)))
-	}
-	return finalResult, strings.Join(message, MessageSeparator)
-}
-
-func (g *GateCommonReconciler) EvaluateTargetObjectCondition(
-	object unstructured.Unstructured,
-	target *gateshv1alpha1.GateTarget,
-) TargetObjectResult {
-	conditions, err := g.GetObjectStatusConditions(&object)
-	if err != nil {
-		return TargetObjectResult{Result: false, Message: fmt.Sprintf("error while fetching object conditions: %s", err.Error())}
-	}
-
-	if len(conditions) == 0 {
-		return TargetObjectResult{Result: false, Message: "no conditions found"}
-	}
-
-	condition := meta.FindStatusCondition(conditions, target.DesiredCondition.Type)
-	if condition == nil {
-		return TargetObjectResult{Result: false, Message: "desired condition not found"}
-	}
-
-	if condition.Status != target.DesiredCondition.Status {
-		return TargetObjectResult{Result: false, Message: "desired condition status not equal"}
-	}
-
-	return TargetObjectResult{Result: true, Message: "condition matches"}
+	message = append(message,
+		fmt.Sprintf("%d objects found", objectsCount),
+		fmt.Sprintf("%d objects match target validators", count),
+		fmt.Sprintf("%d/%d valid objects", count, atLeast),
+	)
+	return count >= atLeast, message
 }
 
 func (g *GateCommonReconciler) ComputeOperation(targetConditions []metav1.Condition) bool {
@@ -210,7 +198,7 @@ func (g *GateCommonReconciler) ComputeOperation(targetConditions []metav1.Condit
 // It handles both Name-based and LabelSelector-based lookups and returns a slice of unstructured objects.
 func (g *GateCommonReconciler) FetchGateTargetObjects(gateTarget *gateshv1alpha1.GateTarget) ([]unstructured.Unstructured, error) {
 	// Determine the namespace to use
-	namespace := gateTarget.Namespace
+	namespace := gateTarget.Selector.Namespace
 	if namespace == "" {
 		namespace = g.Gate.Namespace
 	}
@@ -218,48 +206,48 @@ func (g *GateCommonReconciler) FetchGateTargetObjects(gateTarget *gateshv1alpha1
 	// Create GroupVersionKind for the target resource
 	gvk := schema.GroupVersionKind{
 		Group:   "", // Will be set based on ApiVersion
-		Version: gateTarget.ApiVersion,
-		Kind:    gateTarget.Kind,
+		Version: gateTarget.Selector.ApiVersion,
+		Kind:    gateTarget.Selector.Kind,
 	}
 
 	// Parse Group and Version from ApiVersion
-	gv, err := schema.ParseGroupVersion(gateTarget.ApiVersion)
+	gv, err := schema.ParseGroupVersion(gateTarget.Selector.ApiVersion)
 	if err != nil {
-		return nil, fmt.Errorf("invalid ApiVersion %s: %w", gateTarget.ApiVersion, err)
+		return nil, fmt.Errorf("invalid ApiVersion %s: %w", gateTarget.Selector.ApiVersion, err)
 	}
 	gvk.Group = gv.Group
 	gvk.Version = gv.Version
 
 	// Validate that either Name or LabelSelector is set, but not both
-	if gateTarget.Name != "" && !g.IsLabelSelectorEmpty(gateTarget.LabelSelector) {
-		return nil, fmt.Errorf("name and labelSelector are mutually exclusive in GateTarget %s", gateTarget.TargetName)
+	if gateTarget.Selector.Name != "" && !g.IsLabelSelectorEmpty(gateTarget.Selector.LabelSelector) {
+		return nil, fmt.Errorf("name and labelSelector are mutually exclusive in GateTarget %s", gateTarget.Selector.Name)
 	}
-	if gateTarget.Name == "" && g.IsLabelSelectorEmpty(gateTarget.LabelSelector) {
-		return nil, fmt.Errorf("either name or labelSelector must be specified in GateTarget %s", gateTarget.TargetName)
+	if gateTarget.Selector.Name == "" && g.IsLabelSelectorEmpty(gateTarget.Selector.LabelSelector) {
+		return nil, fmt.Errorf("either name or labelSelector must be specified in GateTarget %s", gateTarget.Selector.Name)
 	}
 
 	var objects []unstructured.Unstructured
 
-	if gateTarget.Name != "" {
+	if gateTarget.Selector.Name != "" {
 		// Case 1: Fetch by Name
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(gvk)
 		err := g.Client.Get(g.Context, client.ObjectKey{
 			Namespace: namespace,
-			Name:      gateTarget.Name,
+			Name:      gateTarget.Selector.Name,
 		}, obj)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return objects, nil // Return empty slice if not found
 			}
-			return nil, fmt.Errorf("failed to get object %s/%s: %w", namespace, gateTarget.Name, err)
+			return nil, fmt.Errorf("failed to get object %s/%s: %w", namespace, gateTarget.Selector.Name, err)
 		}
 		objects = append(objects, *obj)
 	} else {
 		// Case 2: Fetch by LabelSelector
-		selector, err := metav1.LabelSelectorAsSelector(&gateTarget.LabelSelector)
+		selector, err := metav1.LabelSelectorAsSelector(&gateTarget.Selector.LabelSelector)
 		if err != nil {
-			return nil, fmt.Errorf("invalid label selector in GateTarget %s: %w", gateTarget.TargetName, err)
+			return nil, fmt.Errorf("invalid label selector in GateTarget %s: %w", gateTarget.Selector.Name, err)
 		}
 
 		// Create a list to hold the results
@@ -279,7 +267,7 @@ func (g *GateCommonReconciler) FetchGateTargetObjects(gateTarget *gateshv1alpha1
 		// Fetch the list of objects
 		err = g.Client.List(g.Context, list, listOptions)
 		if err != nil {
-			return nil, fmt.Errorf("failed to list objects for GateTarget %s: %w", gateTarget.TargetName, err)
+			return nil, fmt.Errorf("failed to list objects for GateTarget %s: %w", gateTarget.Selector.Name, err)
 		}
 
 		objects = append(objects, list.Items...)

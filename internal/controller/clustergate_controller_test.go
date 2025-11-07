@@ -45,20 +45,37 @@ var _ = Describe("ClusterGate Controller", func() {
 		Spec: gateshv1alpha1.GateSpec{
 			Targets: []gateshv1alpha1.GateTarget{
 				{
-					ApiVersion: "v1",
-					Kind:       "ConfigMap",
-					Namespace:  "default",
-					Name:       "cm1",
-					ExistsOnly: true,
+					Name: "Target1",
+					Selector: gateshv1alpha1.GateTargetSelector{
+						ApiVersion: "v1",
+						Kind:       "ConfigMap",
+						Namespace:  "default",
+						Name:       "cm1",
+					},
+					Validators: []gateshv1alpha1.GateTargetValidator{
+						{
+							AtLeast: 1,
+						},
+					},
 				},
 				{
-					ApiVersion: "apps/v1",
-					Kind:       "Deployment",
-					Namespace:  "default",
-					ExistsOnly: false,
-					LabelSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app": "test1",
+					Name: "Target2",
+					Selector: gateshv1alpha1.GateTargetSelector{
+						ApiVersion: "apps/v1",
+						Kind:       "Deployment",
+						Namespace:  "default",
+						LabelSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test1",
+							},
+						},
+					},
+					Validators: []gateshv1alpha1.GateTargetValidator{
+						{
+							MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+								Type:   "Available",
+								Status: metav1.ConditionTrue,
+							},
 						},
 					},
 				},
