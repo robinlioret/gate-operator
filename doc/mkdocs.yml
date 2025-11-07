@@ -47,7 +47,7 @@ extra:
     actions:
       - accept
       - reject
-      -
+
 markdown_extensions:
   - pymdownx.superfences:
       custom_fences:
@@ -58,12 +58,5 @@ markdown_extensions:
 nav:
   - index.md
   - Get Started: get-started.md
+  - Patterns: patterns.md
   - Examples: examples.md
-  - Patterns:
-      - patterns/index.md
-      - Dependencies Check: patterns/dependencies-check.md
-      - Deployment abstraction: patterns/deployment-abstraction.md
-      - Composition: patterns/composition.md
-      - Synergy with ArgoCD:
-          - patterns/argocd/index.md
-          - Cross application SyncWaves: patterns/argocd/cross-application-syncwaves.md

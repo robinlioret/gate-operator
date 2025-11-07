@@ -11,12 +11,14 @@ metadata:
   name: wait-for-a-deployment
 spec:
   targets:
-    - targetName: MyDeployment
-      apiVersion: apps/v1
-      kind: Deployment
-      name: my-deployment
-      desiredCondition:
-        type: Available
+    - name: MyDeployment
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: my-deployment
+      validators:
+        - matchCondition:
+            type: Available
 ```
 
 ## Gate waiter
@@ -30,12 +32,15 @@ metadata:
   name: wait-for-other-gates
 spec:
   targets:
-    - targetName: Gates
-      apiVersion: gate.sh/v1alpha1
-      kind: Gate
-      labelSelector:
-        matchLabels:
-          deployment-stage: stage-x
-      desiredCondition:
-        type: Opened
+    - name: Gates
+      selector:
+        apiVersion: gate.sh/v1alpha1
+        kind: Gate
+        labelSelector:
+          matchLabels:
+            deployment-stage: stage-x
+      validators:
+        - atLeast: 3
+        - matchCondition:
+            type: Opened
 ```

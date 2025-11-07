@@ -1,3 +1,0 @@
-# Synergy with ArgoCD
-
-Yolo

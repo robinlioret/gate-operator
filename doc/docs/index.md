@@ -24,11 +24,11 @@ Enters Gate Operator with a simple yet powerful concept to synergize with deploy
 
 A Gate is a resource that have two possible state: opened or closed.
 
-It changes state when its logicial expression is validated (then become opened) or invalidated (the become closed).
+It changes state when its logical expression is validated (then become opened) or invalidated (the become closed).
 
-It has a logicial expression about resources in the cluster being in a certain way.
+It has a logical expression about resources in the cluster being in a certain way.
 
-Per exemple:
+Per example:
 
 - A gate may wait for a specific Deployment to be Available
 - Or to wait for a ConfigMap to be created
