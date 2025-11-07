@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,22 +73,25 @@ func (d *GateCustomDefaulter) Default(_ context.Context, obj runtime.Object) err
 		return fmt.Errorf("expected an Gate object but got %T", obj)
 	}
 	gatelog.Info("Defaulting for Gate", "name", gate.GetName())
+	d.ApplyDefault(&gate.Spec)
+	return nil
+}
 
-	if gate.Spec.RequeueAfter == nil {
-		gate.Spec.RequeueAfter = d.DefaultRequeueAfter
+func (d *GateCustomDefaulter) ApplyDefault(spec *gateshv1alpha1.GateSpec) {
+	if spec.RequeueAfter == nil {
+		spec.RequeueAfter = d.DefaultRequeueAfter
 	}
-
-	for _, target := range gate.Spec.Targets {
-		if len(target.Validators) == 0 {
-			target.Validators = d.DefaultTargetValidators
+	for idx := range spec.Targets {
+		if spec.Targets[idx].Name == "" {
+			spec.Targets[idx].Name = "Target" + strconv.Itoa(idx+1)
+		}
+		if len(spec.Targets[idx].Validators) == 0 {
+			spec.Targets[idx].Validators = d.DefaultTargetValidators
 		}
 	}
-
-	if gate.Spec.Operation.Operator == "" {
-		gate.Spec.Operation = d.DefaultOperation
+	if spec.Operation.Operator == "" {
+		spec.Operation = d.DefaultOperation
 	}
-
-	return nil
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

@@ -4,17 +4,16 @@ metadata:
   labels:
     app.kubernetes.io/name: gate-operator
     app.kubernetes.io/managed-by: kustomize
-  name: gate-sample-4
+  name: gate-sample-4-defaulting
   namespace: kube-system
 spec:
-  requeueAfter: 60s
   targets:
     - name: SameNs
       selector:
         apiVersion: apps/v1
         kind: Deployment
         name: coredns
-      validators:
-        - matchCondition:
-            type: "Available"
-            status: "True"
+    - selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: corednsyolo
