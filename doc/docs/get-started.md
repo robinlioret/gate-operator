@@ -99,7 +99,7 @@ status:
     type: KubeProxy
 ```
 
-## Installation with ArgoCD
+## ArgoCD configuration
 
 You need to add the following snippet to your argocd cm
 
@@ -123,3 +123,5 @@ resource.customizations:
         hs.message = "Waiting for the gate to open"
         return hs
 ```
+
+This customizes the healthcheck for the gates, allowing ArgoCD to consider gates Healthy if opened or Progressing if closed.
