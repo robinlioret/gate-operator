@@ -31,4 +31,37 @@ webhooks:
           - v1alpha1
         resources:
           - gates
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: gate-operator-validating-webhook-configuration
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- if .Values.certmanager.enable }}
+    cert-manager.io/inject-ca-from: "{{ $.Release.Namespace }}/serving-cert"
+    {{- end }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+webhooks:
+  - name: vgate-v1alpha1.kb.io
+    clientConfig:
+      service:
+        name: gate-operator-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-gate-sh-v1alpha1-gate
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - gate.sh
+        apiVersions:
+          - v1alpha1
+        resources:
+          - gates
 {{- end }}
