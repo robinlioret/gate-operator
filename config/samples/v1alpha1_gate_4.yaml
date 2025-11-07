@@ -7,12 +7,14 @@ metadata:
   name: gate-sample-4
   namespace: kube-system
 spec:
-  requeueAfter: 10s
+  requeueAfter: 60s
   targets:
-    - targetName: SameNs
-      apiVersion: apps/v1
-      kind: Deployment
-      name: coredns
-      desiredCondition:
-        type: "Available"
-        status: "True"
+    - name: SameNs
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: coredns
+      validators:
+        - matchCondition:
+            type: "Available"
+            status: "True"

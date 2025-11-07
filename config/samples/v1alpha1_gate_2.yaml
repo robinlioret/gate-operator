@@ -6,22 +6,26 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: gate-sample-2
 spec:
-  requeueAfter: 10s
+  requeueAfter: 60s
   targets:
-    - targetName: K8sAppDns
-      apiVersion: apps/v1
-      kind: Deployment
-      namespace: kube-system
-      labelSelector:
-        matchLabels:
-          k8s-app: kube-dns
-      desiredCondition:
-        type: "Available"
-        status: "True"
-    - targetName: NotFound
-      apiVersion: apps/v1
-      kind: Deployment
-      name: "not-found"
-      existsOnly: true
+    - name: K8sAppDns
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        namespace: kube-system
+        labelSelector:
+          matchLabels:
+            k8s-app: kube-dns
+      validators:
+        - matchCondition:
+            type: "Available"
+            status: "True"
+    - name: NotFound
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: "not-found"
+      validators:
+        - atLeast: 1
   operation:
     operator: Or

@@ -1,19 +1,3 @@
-/*
-Copyright 2025 Robin LIORET.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package controller
 
 import (
@@ -23,8 +7,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,697 +15,1120 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var _ = Describe("Gate Common Reconciler", func() {
-	// ================================================
-	// INITIALIZE FAKE CLIENT
-	// ------------------------------------------------
-	scheme := runtime.NewScheme()
-	_ = schemeBuilder.AddToScheme(scheme)
-	_ = gateshv1alpha1.AddToScheme(scheme) // Add CRDs
+var _ = Describe("GateCommonReconciler", func() {
+	var ctx context.Context
+	var scheme *runtime.Scheme
 
-	cm1 := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cm1",
-			Namespace: "default",
-		},
-	}
-	deploy1 := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy1",
-			Namespace: "default",
-			Labels:    map[string]string{"app": "test1", "app2": "test2"},
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 1,
-			Conditions:         []appsv1.DeploymentCondition{},
-		},
-	}
-	deploy2 := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy2",
-			Namespace: "default",
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 1,
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			},
-		},
-	}
-	deploy3 := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy3",
-			Namespace: "default",
-			Labels:    map[string]string{"app": "test1", "app2": "test2"},
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 1,
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionFalse,
-				},
-			},
-		},
-	}
-	deploy4 := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy4",
-			Namespace: "default",
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 1,
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentProgressing,
-					Status: corev1.ConditionTrue,
-				},
-			},
-		},
-	}
-	deploy5 := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy5",
-			Namespace: "default",
-			Labels:    map[string]string{"app2": "test2"},
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 1,
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			},
-		},
-	}
-	deploy6 := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy6",
-			Namespace: "default",
-			Labels:    map[string]string{"app2": "test2"},
-		},
-		Status: appsv1.DeploymentStatus{
-			ObservedGeneration: 1,
-			Conditions: []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			},
-		},
-	}
-	client := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(cm1, deploy1, deploy2, deploy3, deploy4, deploy5, deploy6).
-		Build()
-
-	// ================================================
-	// UNIT TESTS
-	// ------------------------------------------------
-	Context("Test GetObjectName", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate:    &gateshv1alpha1.Gate{},
-		}
-		obj := unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Dummy",
-				"metadata": map[string]interface{}{
-					"namespace": "some-namespace",
-					"name":      "a-name",
-				},
-				"spec": map[string]interface{}{},
-			},
-		}
-
-		It("Should return the object name formatted", func() {
-			By("Calling the function GetObjectName")
-			result := gcr.GetObjectName(obj)
-			Expect(result).To(Equal("some-namespace/a-name"))
-		})
+	BeforeEach(func() {
+		ctx = context.Background()
+		scheme = runtime.NewScheme()
+		Expect(schemeBuilder.AddToScheme(scheme)).To(Succeed())
+		Expect(gateshv1alpha1.AddToScheme(scheme)).To(Succeed())
 	})
 
-	Context("IsLabelSelectorEmpty", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate:    &gateshv1alpha1.Gate{},
-		}
-
-		It("Should detect empty label selector", func() {
-			By("Calling the function IsLabelSelectorEmpty")
-			result := gcr.IsLabelSelectorEmpty(metav1.LabelSelector{})
-			Expect(result).To(BeTrue())
-		})
-
-		It("Should detect specified label selector", func() {
-			var result bool
-
-			By("Calling the function IsLabelSelectorEmpty with ")
-			result = gcr.IsLabelSelectorEmpty(metav1.LabelSelector{MatchLabels: map[string]string{"abc": "def"}})
-			Expect(result).To(BeFalse())
-
-			By("Calling the function IsLabelSelectorEmpty")
-			result = gcr.IsLabelSelectorEmpty(metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
-				Key:      "abc",
-				Operator: "In",
-				Values:   []string{"def"},
-			}}})
-			Expect(result).To(BeFalse())
-		})
-	})
-
-	Context("Test ComputeOperation with the AND operator", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
+	Describe("Reconcile", func() {
+		It("should open the gate for a single target by name with matching condition", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					Operation: gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
-				},
-			},
-		}
-
-		It("Should evaluate a valid AND condition true", func() {
-			By("Creating a fake Gate Common reconciler")
-			By("Creating a set of target conditions")
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-			}
-			By("Calling the function ComputeOperation")
-			result := gcr.ComputeOperation(targetConditions)
-			Expect(result).To(BeTrue())
-		})
-	})
-
-	Context("Test ComputeOperation with the AND operator with invert", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
-				Spec: gateshv1alpha1.GateSpec{
-					Operation: gateshv1alpha1.GateOperation{
-						Operator: gateshv1alpha1.GateOperatorAnd,
-						Invert:   true,
-					},
-				},
-			},
-		}
-
-		It("Should evaluate an invalid AND condition to true", func() {
-			By("Creating a set of target conditions")
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-			}
-			By("Calling the function ComputeOperation")
-			result := gcr.ComputeOperation(targetConditions)
-			Expect(result).To(BeTrue())
-		})
-
-		It("Should evaluate an valid AND condition to false", func() {
-			By("Creating a set of target conditions")
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-			}
-			By("Calling the function ComputeOperation")
-			result := gcr.ComputeOperation(targetConditions)
-			Expect(result).To(BeFalse())
-		})
-	})
-
-	Context("Test ComputeOperation with the OR operator", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
-				Spec: gateshv1alpha1.GateSpec{
-					Operation: gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorOr},
-				},
-			},
-		}
-
-		It("Should evaluate a valid OR condition to true", func() {
-			By("Creating a set of target conditions")
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-			}
-			By("Calling the function ComputeOperation")
-			result := gcr.ComputeOperation(targetConditions)
-			Expect(result).To(BeTrue())
-		})
-
-		It("Should evaluate an invalid OR condition to false", func() {
-			By("Creating a set of target conditions")
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target3", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-			}
-			By("Calling the function ComputeOperation")
-			result := gcr.ComputeOperation(targetConditions)
-			Expect(result).To(BeFalse())
-		})
-	})
-
-	Context("Test ComputeOperation with the OR operator with invert", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
-				Spec: gateshv1alpha1.GateSpec{
-					Operation: gateshv1alpha1.GateOperation{
-						Operator: gateshv1alpha1.GateOperatorOr,
-						Invert:   true,
-					},
-				},
-			},
-		}
-
-		It("Should evaluate a valid OR condition to false", func() {
-			By("Creating a set of target conditions")
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target3", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-			}
-			By("Calling the function ComputeOperation")
-			result := gcr.ComputeOperation(targetConditions)
-			Expect(result).To(BeFalse())
-		})
-
-		It("Should evaluate an invalid OR condition to true", func() {
-			By("Creating a set of target conditions")
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-				{Type: "target3", Status: metav1.ConditionFalse, Reason: "", Message: ""},
-			}
-			By("Calling the function ComputeOperation")
-			result := gcr.ComputeOperation(targetConditions)
-			Expect(result).To(BeTrue())
-		})
-	})
-
-	Context("Test UpdateGateStatusFromResult", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
-				Spec: gateshv1alpha1.GateSpec{
-					Operation: gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorOr},
-				},
-			},
-		}
-
-		It("Should successfully update the gate status", func() {
-			targetConditions := []metav1.Condition{
-				{Type: "target1", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-				{Type: "target2", Status: metav1.ConditionTrue, Reason: "", Message: ""},
-			}
-
-			By("Updating the gate status when result is true")
-			gcr.UpdateGateStatusFromResult(true, targetConditions)
-			Expect(gcr.Gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
-			Expect(gcr.Gate.Status.Conditions).To(HaveLen(2))
-			Expect(gcr.Gate.Status.TargetConditions).To(HaveLen(2))
-			Expect(meta.FindStatusCondition(gcr.Gate.Status.Conditions, "Opened").Status).To(Equal(metav1.ConditionTrue))
-			Expect(meta.FindStatusCondition(gcr.Gate.Status.Conditions, "Closed").Status).To(Equal(metav1.ConditionFalse))
-
-			By("Updating the gate status when result is false")
-			gcr.UpdateGateStatusFromResult(false, targetConditions)
-			Expect(gcr.Gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
-			Expect(gcr.Gate.Status.Conditions).To(HaveLen(2))
-			Expect(gcr.Gate.Status.TargetConditions).To(HaveLen(2))
-			Expect(meta.FindStatusCondition(gcr.Gate.Status.Conditions, "Opened").Status).To(Equal(metav1.ConditionFalse))
-			Expect(meta.FindStatusCondition(gcr.Gate.Status.Conditions, "Closed").Status).To(Equal(metav1.ConditionTrue))
-		})
-	})
-
-	Context("Test EvaluateTarget", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate:    &gateshv1alpha1.Gate{},
-		}
-
-		It("Should evaluate a valid target object with exist only set to true", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "ConfigMap",
-				ApiVersion: "v1",
-				Namespace:  "default",
-				Name:       "cm1",
-				ExistsOnly: true,
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-			Expect(condition.Reason).To(Equal(ReasonOkObjectsFound))
-		})
-
-		It("Should evaluate a invalid target object with exist only set to true", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "ConfigMap",
-				ApiVersion: "v1",
-				Namespace:  "default",
-				Name:       "not-found",
-				ExistsOnly: true,
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-			Expect(condition.Reason).To(Equal(ReasonKoNoObjectsFound))
-		})
-
-		It("Should evaluate to false a valid target with no conditions", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "Deployment",
-				ApiVersion: "apps/v1",
-				Namespace:  "default",
-				Name:       "deploy1",
-				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
-					Type:   "Available",
-					Status: "True",
-				},
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-			Expect(condition.Reason).To(Equal(ReasonKo))
-		})
-
-		It("Should evaluate to true a valid target with matching condition", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "Deployment",
-				ApiVersion: "apps/v1",
-				Namespace:  "default",
-				Name:       "deploy2",
-				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
-					Type:   "Available",
-					Status: "True",
-				},
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-			Expect(condition.Reason).To(Equal(ReasonOk))
-		})
-
-		It("Should evaluate to true a valid target with condition no matching", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "Deployment",
-				ApiVersion: "apps/v1",
-				Namespace:  "default",
-				Name:       "deploy3",
-				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
-					Type:   "Available",
-					Status: "True",
-				},
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-			Expect(condition.Reason).To(Equal(ReasonKo))
-		})
-
-		It("Should evaluate to true a valid target with no matching condition", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "Deployment",
-				ApiVersion: "apps/v1",
-				Namespace:  "default",
-				Name:       "deploy4",
-				ExistsOnly: false,
-				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
-					Type:   "Available",
-					Status: "True",
-				},
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-			Expect(condition.Reason).To(Equal(ReasonKo))
-		})
-
-		It("Should evaluate to true a valid label selection target exist only", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName:    "Target1",
-				Kind:          "Deployment",
-				ApiVersion:    "apps/v1",
-				Namespace:     "default",
-				ExistsOnly:    true,
-				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-			Expect(condition.Reason).To(Equal(ReasonOkObjectsFound))
-		})
-
-		It("Should evaluate to true a valid label selection target exist only using atleast", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName:    "Target1",
-				Kind:          "Deployment",
-				ApiVersion:    "apps/v1",
-				Namespace:     "default",
-				ExistsOnly:    true,
-				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
-				AtLeast:       2,
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-			Expect(condition.Reason).To(Equal(ReasonOkObjectsFound))
-		})
-
-		It("Should evaluate to false an invalid label selection target exist only using atleast", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName:    "Target1",
-				Kind:          "Deployment",
-				ApiVersion:    "apps/v1",
-				Namespace:     "default",
-				ExistsOnly:    true,
-				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
-				AtLeast:       100,
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-			Expect(condition.Reason).To(Equal(ReasonKoNotEnoughObjectsFound))
-		})
-
-		It("Should evaluate to true a valid label selection target exist only using atleast", func() {
-			By("Calling the function EvaluateTarget")
-			target := gateshv1alpha1.GateTarget{
-				TargetName:    "Target1",
-				Kind:          "Deployment",
-				ApiVersion:    "apps/v1",
-				Namespace:     "default",
-				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app2": "test2"}},
-				AtLeast:       2,
-				ExistsOnly:    false,
-				DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
-					Type:   "Available",
-					Status: "True",
-				},
-			}
-			condition := gcr.EvaluateTarget(&target)
-			AddReportEntry("Condition", condition)
-			Expect(condition.Type).To(Equal("Target1"))
-			Expect(condition.Status).To(Equal(metav1.ConditionTrue))
-			Expect(condition.Reason).To(Equal(ReasonOk))
-		})
-	})
-
-	Context("Test EvaluateSpec", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
-				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
-							TargetName: "Target1",
-							Kind:       "Deployment",
-							ApiVersion: "apps/v1",
-							Namespace:  "default",
-							Name:       "deploy2",
-							ExistsOnly: false,
-							DesiredCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
-								Type:   "Available",
-								Status: "True",
+							Name: "target-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionTrue))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionFalse))
+			Expect(gate.Status.TargetConditions).To(HaveLen(1))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.TargetConditions[0].Type).To(Equal("target-pod"))
+		})
+
+		It("should close the gate for a single target by name with non-matching condition", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "False",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionFalse))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.TargetConditions).To(HaveLen(1))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("condition Ready is wrong (expected True, got False)"))
+		})
+
+		It("should close the gate if no objects are found for a target", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "non-existent-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(gate.Status.TargetConditions).To(HaveLen(1))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("0 objects found\n0 objects match target validators\n0/1 valid objects"))
+		})
+
+		It("should close the gate for multiple targets with AND operation where one fails", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Operation: gateshv1alpha1.GateOperation{
+						Operator: gateshv1alpha1.GateOperatorAnd,
+					},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "pod1",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "pod1",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
 							},
 						},
 						{
-							TargetName: "Target2",
-							Kind:       "ConfigMap",
-							ApiVersion: "v1",
-							Namespace:  "default",
-							Name:       "cm1",
-							ExistsOnly: true,
+							Name: "pod2",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "pod2",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
 						},
 					},
 				},
-			},
-		}
+			}
 
-		It("Should evaluate a valid target", func() {
-			result, conditions := gcr.EvaluateSpec()
-			AddReportEntry("Condition", conditions)
-			Expect(result).To(BeTrue())
-			Expect(conditions).To(HaveLen(2))
-		})
-	})
-
-	Context("Test FetchGateTargetObjects", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "gate-1",
-				},
-			},
-		}
-
-		It("Should fetch existing target objects", func() {
-			var result []unstructured.Unstructured
-			var err error
-			By("Fetching target by name in the gate namespace")
-			result, err = gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "Deployment",
-				ApiVersion: "apps/v1",
-				Name:       "deploy1",
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(HaveLen(1))
-
-			By("Fetching target by label in the gate namespace")
-			result, err = gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "Deployment",
-				ApiVersion: "apps/v1",
-				LabelSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"app": "test1"},
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(HaveLen(2))
-		})
-
-		It("Should fail if both name and label selector are specified", func() {
-			_, err := gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
-				TargetName:    "Target1",
-				Kind:          "Deployment",
-				ApiVersion:    "apps/v1",
-				Name:          "deploy1",
-				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test1"}},
-			})
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("Should fail if both name and label selector are missing", func() {
-			_, err := gcr.FetchGateTargetObjects(&gateshv1alpha1.GateTarget{
-				TargetName: "Target1",
-				Kind:       "Deployment",
-				ApiVersion: "apps/v1",
-			})
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Context("Test GetObjectStatusConditions", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate:    &gateshv1alpha1.Gate{},
-		}
-
-		It("Should return nil if status is missing", func() {
-			result, err := gcr.GetObjectStatusConditions(&unstructured.Unstructured{
+			pod1 := &unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"apiVersion": "apps/v1",
-					"kind":       "Deployment",
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod1",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
 				},
-			})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(BeNil())
-		})
-	})
+			}
 
-	Context("Test Reconcile", func() {
-		gcr := &GateCommonReconciler{
-			Client:  client,
-			Context: context.Background(),
-			Gate: &gateshv1alpha1.Gate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
+			pod2 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod2",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "False",
+							},
+						},
+					},
 				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod1, pod2).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(gate.Status.TargetConditions).To(HaveLen(2))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.TargetConditions[1].Status).To(Equal(metav1.ConditionFalse))
+		})
+
+		It("should open the gate for multiple targets with OR operation where one succeeds", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Operation: gateshv1alpha1.GateOperation{
+						Operator: gateshv1alpha1.GateOperatorOr,
+					},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
-							TargetName: "Target1",
-							Kind:       "ConfigMap",
-							ApiVersion: "v1",
-							Namespace:  "default",
-							Name:       "cm1",
-							ExistsOnly: true,
+							Name: "pod1",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "pod1",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+						{
+							Name: "pod2",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "pod2",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
 						},
 					},
-					Operation: gateshv1alpha1.GateOperation{
-						Operator: gateshv1alpha1.GateOperatorAnd,
-					},
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Second},
 				},
-			},
-		}
+			}
 
-		It("Should reconcile successfully", func() {
-			By("Calling Reconcile the target")
-			err := gcr.Reconcile()
-			Expect(err).ToNot(HaveOccurred())
+			pod1 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod1",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			pod2 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod2",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "False",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod1, pod2).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+			Expect(gate.Status.TargetConditions).To(HaveLen(2))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.TargetConditions[1].Status).To(Equal(metav1.ConditionFalse))
+		})
+
+		It("should invert the result when Operation.Invert is true", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Operation: gateshv1alpha1.GateOperation{
+						Invert: true,
+					},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+		})
+
+		It("should handle label selector with multiple matching objects, all matching validators", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pods",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"app": "test"},
+								},
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod1 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod1",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			pod2 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod2",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod1, pod2).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("2 objects found\n2 objects match target validators\n2/2 valid objects"))
+		})
+
+		It("should close the gate if not all objects match validators in label selector", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pods",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"app": "test"},
+								},
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod1 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod1",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			pod2 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod2",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "False",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod1, pod2).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("2 objects found\n1 objects match target validators\n1/2 valid objects"))
+		})
+
+		It("should set error condition if invalid label selector", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pods",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								LabelSelector: metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      "app",
+											Operator: "InvalidOperator",
+											Values:   []string{"test"},
+										},
+									},
+								},
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionFalse))
+			Expect(gate.Status.TargetConditions[0].Reason).To(Equal("ErrorWhileFetching"))
+			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("invalid label selector"))
+		})
+
+		It("should handle target with atLeast", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pods",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"app": "test"},
+								},
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									AtLeast: 1,
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod1 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod1",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			pod2 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod2",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "False",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod1, pod2).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("1/1 valid objects")) // atLeast=1 in message, but result ignores it
+		})
+	})
+
+	Describe("FetchGateTargetObjects", func() {
+		It("should fetch object by name", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+			}
+			target := &gateshv1alpha1.GateTarget{
+				Name: "target-pod",
+				Selector: gateshv1alpha1.GateTargetSelector{
+					ApiVersion: "v1",
+					Kind:       "Pod",
+					Name:       "target-pod",
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			objects, err := reconciler.FetchGateTargetObjects(target)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(1))
+			Expect(objects[0].GetName()).To(Equal("target-pod"))
+		})
+
+		It("should return empty if object by name not found", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+			}
+			target := &gateshv1alpha1.GateTarget{
+				Name: "non-existent",
+				Selector: gateshv1alpha1.GateTargetSelector{
+					ApiVersion: "v1",
+					Kind:       "Pod",
+					Name:       "target-pod",
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			objects, err := reconciler.FetchGateTargetObjects(target)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(BeEmpty())
+		})
+
+		It("should fetch objects by label selector", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+			}
+			target := &gateshv1alpha1.GateTarget{
+				Name: "target-pods",
+				Selector: gateshv1alpha1.GateTargetSelector{
+					ApiVersion: "v1",
+					Kind:       "Pod",
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "test"},
+					},
+				},
+			}
+
+			pod1 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod1",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+				},
+			}
+
+			pod2 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod2",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "other",
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pod1, pod2).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			objects, err := reconciler.FetchGateTargetObjects(target)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(1))
+			Expect(objects[0].GetName()).To(Equal("pod1"))
+		})
+
+		It("should return error if both name and label selector are set", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+			}
+			target := &gateshv1alpha1.GateTarget{
+				Name: "target-pod",
+				Selector: gateshv1alpha1.GateTargetSelector{
+					ApiVersion: "v1",
+					Kind:       "Pod",
+					Name:       "target-pod",
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "test"},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			objects, err := reconciler.FetchGateTargetObjects(target)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("name and labelSelector are mutually exclusive"))
+			Expect(objects).To(BeNil())
+		})
+
+		It("should return error if neither name nor label selector is set", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+			}
+			target := &gateshv1alpha1.GateTarget{
+				Name: "target",
+				Selector: gateshv1alpha1.GateTargetSelector{
+					ApiVersion: "v1",
+					Kind:       "Pod",
+				},
+			}
+			target.Name = "" // Clear name
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			objects, err := reconciler.FetchGateTargetObjects(target)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("either name or labelSelector must be specified"))
+			Expect(objects).To(BeNil())
+		})
+
+		It("should use target namespace if specified", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+			}
+			target := &gateshv1alpha1.GateTarget{
+				Name: "target-pod",
+				Selector: gateshv1alpha1.GateTargetSelector{
+					ApiVersion: "v1",
+					Kind:       "Pod",
+					Namespace:  "custom-ns",
+					Name:       "target-pod",
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "custom-ns",
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			objects, err := reconciler.FetchGateTargetObjects(target)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(1))
+			Expect(objects[0].GetNamespace()).To(Equal("custom-ns"))
+		})
+	})
+
+	Describe("GetObjectStatusConditions", func() {
+		It("should extract conditions from unstructured object", func() {
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+							map[string]interface{}{
+								"type":   "Initialized",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			reconciler := GateCommonReconciler{} // No need for full setup
+
+			conditions, err := reconciler.GetObjectStatusConditions(obj)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(conditions).To(HaveLen(2))
+			Expect(conditions[0].Type).To(Equal("Ready"))
+			Expect(conditions[0].Status).To(Equal(metav1.ConditionTrue))
+		})
+
+		It("should return nil if no status field", func() {
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{},
+			}
+
+			reconciler := GateCommonReconciler{}
+
+			conditions, err := reconciler.GetObjectStatusConditions(obj)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(conditions).To(BeNil())
+		})
+
+		It("should return nil if no conditions field", func() {
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{},
+				},
+			}
+
+			reconciler := GateCommonReconciler{}
+
+			conditions, err := reconciler.GetObjectStatusConditions(obj)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(conditions).To(BeNil())
+		})
+
+		It("should skip invalid condition entries", func() {
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+							"invalid-string", // Bad type
+						},
+					},
+				},
+			}
+
+			reconciler := GateCommonReconciler{}
+
+			conditions, err := reconciler.GetObjectStatusConditions(obj)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(conditions).To(HaveLen(1))
+			Expect(conditions[0].Type).To(Equal("Ready"))
+		})
+	})
+
+	Describe("ComputeOperation", func() {
+		var reconciler GateCommonReconciler
+		BeforeEach(func() {
+			reconciler = GateCommonReconciler{
+				Gate: &gateshv1alpha1.Gate{
+					Spec: gateshv1alpha1.GateSpec{},
+				},
+			}
+		})
+
+		It("should return true for AND with all true conditions", func() {
+			conditions := []metav1.Condition{
+				{Status: metav1.ConditionTrue},
+				{Status: metav1.ConditionTrue},
+			}
+			result := reconciler.ComputeOperation(conditions)
+			Expect(result).To(BeTrue())
+		})
+
+		It("should return false for AND with one false condition", func() {
+			conditions := []metav1.Condition{
+				{Status: metav1.ConditionTrue},
+				{Status: metav1.ConditionFalse},
+			}
+			result := reconciler.ComputeOperation(conditions)
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return true for OR with one true condition", func() {
+			reconciler.Gate.Spec.Operation.Operator = gateshv1alpha1.GateOperatorOr
+			conditions := []metav1.Condition{
+				{Status: metav1.ConditionFalse},
+				{Status: metav1.ConditionTrue},
+			}
+			result := reconciler.ComputeOperation(conditions)
+			Expect(result).To(BeTrue())
+		})
+
+		It("should return false for OR with all false conditions", func() {
+			reconciler.Gate.Spec.Operation.Operator = gateshv1alpha1.GateOperatorOr
+			conditions := []metav1.Condition{
+				{Status: metav1.ConditionFalse},
+				{Status: metav1.ConditionFalse},
+			}
+			result := reconciler.ComputeOperation(conditions)
+			Expect(result).To(BeFalse())
+		})
+
+		It("should invert the result if Invert is true", func() {
+			reconciler.Gate.Spec.Operation.Invert = true
+			conditions := []metav1.Condition{
+				{Status: metav1.ConditionTrue},
+			}
+			result := reconciler.ComputeOperation(conditions)
+			Expect(result).To(BeFalse())
 		})
 	})
 })

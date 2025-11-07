@@ -6,13 +6,15 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: gate-sample-3
 spec:
-  requeueAfter: 10s
+  requeueAfter: 60s
   targets:
-    - targetName: WeirdConditionType
-      apiVersion: apps/v1
-      kind: Deployment
-      namespace: kube-system
-      name: coredns
-      desiredCondition:
-        type: "Weirdo"
-        status: "True"
+    - name: WeirdConditionType
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        namespace: kube-system
+        name: coredns
+      validators:
+        - matchCondition:
+            type: "Weirdo"
+            status: "True"
