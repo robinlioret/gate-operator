@@ -1,6 +1,9 @@
 site_name: Gate Operator
 site_author: Robin LIORET
 site_url: https://robinlioret.github.io/gate-operator
+repo_url: https://github.com/robinlioret/gate-operator
+repo_name: robinlioret/gate-operator
+edit_uri: edit/main/doc/docs/
 
 copyright: >
   Copyright &copy; 2025 Robin LIORET – <a href="#__consent">Change cookie settings</a>
@@ -8,8 +11,12 @@ copyright: >
 theme:
   name: material
   language: en
+  font:
+    text: Sansation
   palette:
     primary: purple
+  icon:
+    repo: fontawesome/brands/github
   features:
     - navigation.instant
     - navigation.instant.progress

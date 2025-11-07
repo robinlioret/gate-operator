@@ -13,7 +13,7 @@ The gate is coming in front of the deployment (by order):
 
 ```mermaid
 flowchart LR
-    subgraph lbc[aws-load-balancer-controller]
+    subgraph lbc[AWS LBC]
         lbc-mhook[Mutating Webhook]
         lbc-vhook[Validation Webhook]
         lbc-deploy[Deployment]
@@ -86,7 +86,7 @@ Per example:
 
 ```mermaid
 flowchart LR
-    subgraph lbc[aws-load-balancer-controller]
+    subgraph lbc[AWS LBC]
         lbc-mhook[Mutating Webhook]
         lbc-vhook[Validation Webhook]
         lbc-deploy[Deployment]
