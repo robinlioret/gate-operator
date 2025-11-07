@@ -30,34 +30,25 @@ const (
 	GateOperatorOr  GateOperator = "Or"
 )
 
+type GateState = string
+
+const (
+	GateStateOpened GateState = "Opened"
+	GateStateClosed GateState = "Closed"
+)
+
 type GateOperation struct {
 	// Operation to perform. By default, it is "And".
 	// +kubebuilder:validation:Enum=And;Or
-	// +default:value="And"
 	Operator GateOperator `json:"operator,omitempty"`
 
-	// If true, will invert the result of the Gate
-	// +default:value=false
+	// If true, will invert the result of the Gate. By default, false.
 	Invert bool `json:"invert,omitempty"`
 }
 
-type GateTargetCondition struct {
-	// Type of the kubernetes conditions.
-	// +default:value="Available"
-	Type string `json:"type"`
-
-	// Type of the kubernetes conditions.
-	// +default:value="True"
-	Status metav1.ConditionStatus `json:"status"`
-}
-
-// GateExpression defines the conditions for the gate to be available
-type GateTarget struct {
-	// TargetName is the name of the target. Must be PascalCase.
-	// +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
-	// +required
-	TargetName string `json:"targetName"`
-
+// GateTargetSelector defines how to select resources to evaluate for the target.
+// +kubebuilder:validation:XValidation:rule="(has(self.name) ? 1 : 0) + (has(self.labelSelector) ? 1 : 0) == 1",message="Invalid target specification: you must provide exactly one of 'name' (for a single resource) or 'labelSelector' (for multiple resources). Providing both or neither is not allowed."
+type GateTargetSelector struct {
 	// Kind of the resource(s) to target
 	// +required
 	Kind string `json:"kind"`
@@ -66,7 +57,7 @@ type GateTarget struct {
 	// +required
 	ApiVersion string `json:"apiVersion"`
 
-	// Namespace of the resource(s) to target. By default, the namespace of the gate.
+	// Namespace of the resource(s) to target. By default, the namespace of the gate if relevant.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 
@@ -77,23 +68,48 @@ type GateTarget struct {
 	// Select the resources using labels. Incompatible with name selection.
 	// +optional
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
 
-	// If true, the target will be validated if the resources is found regardless of its condition.
-	// If true and using labels selection, this will validate the target if at least one resource is found.
-	// By default, false.
-	// +optional
-	// +default:value=false
-	ExistsOnly bool `json:"existsOnly,omitempty"`
+// GateTargetValidatorMatchCondition defines what condition is desired on the target objects.
+type GateTargetValidatorMatchCondition struct {
+	// Type of the kubernetes conditions.
+	// +required
+	Type string `json:"type"`
 
-	// DesiredCondition of the resources. By default, will look for Available to be "True".
+	// Type of the kubernetes conditions. By default, "True"
 	// +optional
-	DesiredCondition GateTargetCondition `json:"desiredCondition,omitempty"`
+	Status metav1.ConditionStatus `json:"status"`
+}
 
-	// When selecting targets by labels, this validates the conditions if N or more objects validates the condition.
-	// By default, disabled (0)
+// GateTargetValidator defines a part of the logic to evaluate the target.
+// +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) == 1",message="The validator must have exactly one key."
+type GateTargetValidator struct {
+	// Validate the target if at least N objects matches other validator. If no validator are provided, will check if
+	// at least N object was found. If not specified alongside other validator, all found objects must match them.
 	// +optional
-	// +default:value=0
-	AtLeast int `json:"atLeast,omitempty"`
+	AtLeast uint `json:"atLeast,omitempty"`
+
+	// Desired condition of the resources.
+	// +optional
+	MatchCondition GateTargetValidatorMatchCondition `json:"matchCondition,omitempty"`
+}
+
+// GateTarget defines the conditions for the gate to be available
+type GateTarget struct {
+	// Name of the target. Must be PascalCase. This will be used to make the matching target condition humanly
+	// identifiable.
+	// +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
+	// +required
+	Name string `json:"name"`
+
+	// Selector
+	// +required
+	Selector GateTargetSelector `json:"selector"`
+
+	// Validators defines how the target should be validated. By default, the target will be validated if at least one
+	// object was found by the selector regardless of its state.
+	// +optional
+	Validators []GateTargetValidator `json:"validators,omitempty"`
 }
 
 // GateSpec defines the desired state of Gate
@@ -114,16 +130,8 @@ type GateSpec struct {
 
 	// Defines the duration between evaluations of a Gate. By default, 60 seconds
 	// +optional
-	// +default:value="60s"
 	RequeueAfter *metav1.Duration `json:"requeueAfter,omitempty"`
 }
-
-type GateState = string
-
-const (
-	GateStateOpened GateState = "Opened"
-	GateStateClosed GateState = "Closed"
-)
 
 // GateStatus defines the observed state of Gate.
 type GateStatus struct {
