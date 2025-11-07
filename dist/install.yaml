@@ -65,6 +65,8 @@ spec:
                     - And
                     - Or
                     type: string
+                required:
+                - operator
                 type: object
               requeueAfter:
                 description: Defines the duration between evaluations of a Gate. By
@@ -79,8 +81,8 @@ spec:
                     name:
                       description: |-
                         Name of the target. Must be PascalCase. This will be used to make the matching target condition humanly
-                        identifiable.
-                      pattern: ^[A-Z][a-zA-Z0-9]*$
+                        identifiable. Name will be inferred if not specified.
+                        // +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
                       type: string
                     selector:
                       description: Selector
@@ -150,20 +152,14 @@ spec:
                       - apiVersion
                       - kind
                       type: object
-                      x-kubernetes-validations:
-                      - message: 'Invalid target specification: you must provide exactly
-                          one of ''name'' (for a single resource) or ''labelSelector''
-                          (for multiple resources). Providing both or neither is not
-                          allowed.'
-                        rule: '(has(self.name) ? 1 : 0) + (has(self.labelSelector)
-                          ? 1 : 0) == 1'
                     validators:
                       description: |-
                         Validators defines how the target should be validated. By default, the target will be validated if at least one
                         object was found by the selector regardless of its state.
                       items:
-                        description: GateTargetValidator defines a part of the logic
-                          to evaluate the target.
+                        description: |-
+                          GateTargetValidator defines a part of the logic to evaluate the target.
+                          // +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) == 1",message="The validator must have exactly one key."
                         properties:
                           atLeast:
                             description: |-
@@ -184,13 +180,8 @@ spec:
                             - type
                             type: object
                         type: object
-                        x-kubernetes-validations:
-                        - message: The validator must have exactly one key.
-                          rule: '(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition)
-                            ? 1 : 0) == 1'
                       type: array
                   required:
-                  - name
                   - selector
                   type: object
                 minItems: 1
@@ -402,6 +393,8 @@ spec:
                     - And
                     - Or
                     type: string
+                required:
+                - operator
                 type: object
               requeueAfter:
                 description: Defines the duration between evaluations of a Gate. By
@@ -416,8 +409,8 @@ spec:
                     name:
                       description: |-
                         Name of the target. Must be PascalCase. This will be used to make the matching target condition humanly
-                        identifiable.
-                      pattern: ^[A-Z][a-zA-Z0-9]*$
+                        identifiable. Name will be inferred if not specified.
+                        // +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
                       type: string
                     selector:
                       description: Selector
@@ -487,20 +480,14 @@ spec:
                       - apiVersion
                       - kind
                       type: object
-                      x-kubernetes-validations:
-                      - message: 'Invalid target specification: you must provide exactly
-                          one of ''name'' (for a single resource) or ''labelSelector''
-                          (for multiple resources). Providing both or neither is not
-                          allowed.'
-                        rule: '(has(self.name) ? 1 : 0) + (has(self.labelSelector)
-                          ? 1 : 0) == 1'
                     validators:
                       description: |-
                         Validators defines how the target should be validated. By default, the target will be validated if at least one
                         object was found by the selector regardless of its state.
                       items:
-                        description: GateTargetValidator defines a part of the logic
-                          to evaluate the target.
+                        description: |-
+                          GateTargetValidator defines a part of the logic to evaluate the target.
+                          // +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) == 1",message="The validator must have exactly one key."
                         properties:
                           atLeast:
                             description: |-
@@ -521,13 +508,8 @@ spec:
                             - type
                             type: object
                         type: object
-                        x-kubernetes-validations:
-                        - message: The validator must have exactly one key.
-                          rule: '(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition)
-                            ? 1 : 0) == 1'
                       type: array
                   required:
-                  - name
                   - selector
                   type: object
                 minItems: 1
@@ -1009,6 +991,23 @@ spec:
     app.kubernetes.io/name: gate-operator
     control-plane: controller-manager
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: gate-operator
+  name: gate-operator-webhook-service
+  namespace: gate-operator-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    app.kubernetes.io/name: gate-operator
+    control-plane: controller-manager
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1037,6 +1036,7 @@ spec:
         - --metrics-bind-address=:8443
         - --leader-elect
         - --health-probe-bind-address=:8081
+        - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
         command:
         - /manager
         image: ghcr.io/robinlioret/gate-operator:latest
@@ -1047,7 +1047,10 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: manager
-        ports: []
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz
@@ -1067,11 +1070,158 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-        volumeMounts: []
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: webhook-certs
+          readOnly: true
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       serviceAccountName: gate-operator-controller-manager
       terminationGracePeriodSeconds: 10
-      volumes: []
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: gate-operator
+  name: gate-operator-metrics-certs
+  namespace: gate-operator-system
+spec:
+  dnsNames:
+  - SERVICE_NAME.SERVICE_NAMESPACE.svc
+  - SERVICE_NAME.SERVICE_NAMESPACE.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: gate-operator-selfsigned-issuer
+  secretName: metrics-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: gate-operator
+  name: gate-operator-serving-cert
+  namespace: gate-operator-system
+spec:
+  dnsNames:
+  - gate-operator-webhook-service.gate-operator-system.svc
+  - gate-operator-webhook-service.gate-operator-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: gate-operator-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: gate-operator
+  name: gate-operator-selfsigned-issuer
+  namespace: gate-operator-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: gate-operator-system/gate-operator-serving-cert
+  name: gate-operator-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: gate-operator-webhook-service
+      namespace: gate-operator-system
+      path: /mutate-gate-sh-v1alpha1-clustergate
+  failurePolicy: Fail
+  name: mclustergate-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - gate.sh
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - clustergates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: gate-operator-webhook-service
+      namespace: gate-operator-system
+      path: /mutate-gate-sh-v1alpha1-gate
+  failurePolicy: Fail
+  name: mgate-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - gate.sh
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gates
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: gate-operator-system/gate-operator-serving-cert
+  name: gate-operator-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: gate-operator-webhook-service
+      namespace: gate-operator-system
+      path: /validate-gate-sh-v1alpha1-clustergate
+  failurePolicy: Fail
+  name: vclustergate-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - gate.sh
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - clustergates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: gate-operator-webhook-service
+      namespace: gate-operator-system
+      path: /validate-gate-sh-v1alpha1-gate
+  failurePolicy: Fail
+  name: vgate-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - gate.sh
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gates
+  sideEffects: None

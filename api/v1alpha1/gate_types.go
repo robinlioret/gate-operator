@@ -40,14 +40,14 @@ const (
 type GateOperation struct {
 	// Operation to perform. By default, it is "And".
 	// +kubebuilder:validation:Enum=And;Or
-	Operator GateOperator `json:"operator,omitempty"`
+	Operator GateOperator `json:"operator"`
 
 	// If true, will invert the result of the Gate. By default, false.
-	Invert bool `json:"invert,omitempty"`
+	Invert bool `json:"invert,omitempty,omitzero"`
 }
 
 // GateTargetSelector defines how to select resources to evaluate for the target.
-// +kubebuilder:validation:XValidation:rule="(has(self.name) ? 1 : 0) + (has(self.labelSelector) ? 1 : 0) == 1",message="Invalid target specification: you must provide exactly one of 'name' (for a single resource) or 'labelSelector' (for multiple resources). Providing both or neither is not allowed."
+// // +kubebuilder:validation:XValidation:rule="(has(self.name) ? 1 : 0) + (has(self.labelSelector) ? 1 : 0) == 1",message="Invalid target specification: you must provide exactly one of 'name' (for a single resource) or 'labelSelector' (for multiple resources). Providing both or neither is not allowed."
 type GateTargetSelector struct {
 	// Kind of the resource(s) to target
 	// +required
@@ -59,15 +59,15 @@ type GateTargetSelector struct {
 
 	// Namespace of the resource(s) to target. By default, the namespace of the gate if relevant.
 	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	Namespace string `json:"namespace,omitempty,omitzero"`
 
 	// Name of the resource to target. Incompatible with label selection.
 	// +optional
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitempty,omitzero"`
 
 	// Select the resources using labels. Incompatible with name selection.
 	// +optional
-	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty,omitzero"`
 }
 
 // GateTargetValidatorMatchCondition defines what condition is desired on the target objects.
@@ -82,24 +82,24 @@ type GateTargetValidatorMatchCondition struct {
 }
 
 // GateTargetValidator defines a part of the logic to evaluate the target.
-// +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) == 1",message="The validator must have exactly one key."
+// // +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) == 1",message="The validator must have exactly one key."
 type GateTargetValidator struct {
 	// Validate the target if at least N objects matches other validator. If no validator are provided, will check if
 	// at least N object was found. If not specified alongside other validator, all found objects must match them.
 	// +optional
-	AtLeast int `json:"atLeast,omitempty"`
+	AtLeast int `json:"atLeast,omitempty,omitzero"`
 
 	// Desired condition of the resources.
 	// +optional
-	MatchCondition GateTargetValidatorMatchCondition `json:"matchCondition,omitempty"`
+	MatchCondition GateTargetValidatorMatchCondition `json:"matchCondition,omitempty,omitzero"`
 }
 
 // GateTarget defines the conditions for the gate to be available
 type GateTarget struct {
 	// Name of the target. Must be PascalCase. This will be used to make the matching target condition humanly
-	// identifiable.
-	// +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
-	// +required
+	// identifiable. Name will be inferred if not specified.
+	// +optional
+	// // +kubebuilder:validation:Pattern=`^[A-Z][a-zA-Z0-9]*$`
 	Name string `json:"name"`
 
 	// Selector
@@ -109,7 +109,7 @@ type GateTarget struct {
 	// Validators defines how the target should be validated. By default, the target will be validated if at least one
 	// object was found by the selector regardless of its state.
 	// +optional
-	Validators []GateTargetValidator `json:"validators,omitempty"`
+	Validators []GateTargetValidator `json:"validators,omitempty,omitzero"`
 }
 
 // GateSpec defines the desired state of Gate

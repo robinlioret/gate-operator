@@ -12,7 +12,7 @@ spec:
       selector:
         apiVersion: apps/v1
         kind: Deployment
-        name: corednssdsdq
+        name: coredns
         namespace: kube-system
       validators:
         - atLeast: 1
