@@ -54,11 +54,10 @@ spec:
                   they will simply be anded.
                 properties:
                   invert:
-                    default: false
-                    description: If true, will invert the result of the Gate
+                    description: If true, will invert the result of the Gate. By default,
+                      false.
                     type: boolean
                   operator:
-                    default: And
                     description: Operation to perform. By default, it is "And".
                     enum:
                     - And
@@ -66,114 +65,131 @@ spec:
                     type: string
                 type: object
               requeueAfter:
-                default: 60s
                 description: Defines the duration between evaluations of a Gate. By
                   default, 60 seconds
                 type: string
               targets:
                 description: The set of conditions to make the Gate ready.
                 items:
-                  description: GateExpression defines the conditions for the gate
-                    to be available
+                  description: GateTarget defines the conditions for the gate to be
+                    available
                   properties:
-                    apiVersion:
-                      description: ApiVersion of the resource(s) to target
-                      type: string
-                    atLeast:
-                      default: 0
-                      description: |-
-                        When selecting targets by labels, this validates the conditions if N or more objects validates the condition.
-                        By default, disabled (0)
-                      type: integer
-                    desiredCondition:
-                      description: DesiredCondition of the resources. By default,
-                        will look for Available to be "True".
-                      properties:
-                        status:
-                          default: "True"
-                          description: Type of the kubernetes conditions.
-                          type: string
-                        type:
-                          default: Available
-                          description: Type of the kubernetes conditions.
-                          type: string
-                      required:
-                      - status
-                      - type
-                      type: object
-                    existsOnly:
-                      default: false
-                      description: |-
-                        If true, the target will be validated if the resources is found regardless of its condition.
-                        If true and using labels selection, this will validate the target if at least one resource is found.
-                        By default, false.
-                      type: boolean
-                    kind:
-                      description: Kind of the resource(s) to target
-                      type: string
-                    labelSelector:
-                      description: Select the resources using labels. Incompatible
-                        with name selection.
-                      properties:
-                        matchExpressions:
-                          description: matchExpressions is a list of label selector
-                            requirements. The requirements are ANDed.
-                          items:
-                            description: |-
-                              A label selector requirement is a selector that contains values, a key, and an operator that
-                              relates the key and values.
-                            properties:
-                              key:
-                                description: key is the label key that the selector
-                                  applies to.
-                                type: string
-                              operator:
-                                description: |-
-                                  operator represents a key's relationship to a set of values.
-                                  Valid operators are In, NotIn, Exists and DoesNotExist.
-                                type: string
-                              values:
-                                description: |-
-                                  values is an array of string values. If the operator is In or NotIn,
-                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                  the values array must be empty. This array is replaced during a strategic
-                                  merge patch.
-                                items:
-                                  type: string
-                                type: array
-                                x-kubernetes-list-type: atomic
-                            required:
-                            - key
-                            - operator
-                            type: object
-                          type: array
-                          x-kubernetes-list-type: atomic
-                        matchLabels:
-                          additionalProperties:
-                            type: string
-                          description: |-
-                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                            map is equivalent to an element of matchExpressions, whose key field is "key", the
-                            operator is "In", and the values array contains only "value". The requirements are ANDed.
-                          type: object
-                      type: object
-                      x-kubernetes-map-type: atomic
                     name:
-                      description: Name of the resource to target. Incompatible with
-                        label selection.
-                      type: string
-                    namespace:
-                      description: Namespace of the resource(s) to target. By default,
-                        the namespace of the gate.
-                      type: string
-                    targetName:
-                      description: TargetName is the name of the target. Must be PascalCase.
+                      description: |-
+                        Name of the target. Must be PascalCase. This will be used to make the matching target condition humanly
+                        identifiable.
                       pattern: ^[A-Z][a-zA-Z0-9]*$
                       type: string
+                    selector:
+                      description: Selector
+                      properties:
+                        apiVersion:
+                          description: ApiVersion of the resource(s) to target
+                          type: string
+                        kind:
+                          description: Kind of the resource(s) to target
+                          type: string
+                        labelSelector:
+                          description: Select the resources using labels. Incompatible
+                            with name selection.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        name:
+                          description: Name of the resource to target. Incompatible
+                            with label selection.
+                          type: string
+                        namespace:
+                          description: Namespace of the resource(s) to target. By
+                            default, the namespace of the gate if relevant.
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      type: object
+                      x-kubernetes-validations:
+                      - message: 'Invalid target specification: you must provide exactly
+                          one of ''name'' (for a single resource) or ''labelSelector''
+                          (for multiple resources). Providing both or neither is not
+                          allowed.'
+                        rule: '(has(self.name) ? 1 : 0) + (has(self.labelSelector)
+                          ? 1 : 0) == 1'
+                    validators:
+                      description: |-
+                        Validators defines how the target should be validated. By default, the target will be validated if at least one
+                        object was found by the selector regardless of its state.
+                      items:
+                        description: GateTargetValidator defines a part of the logic
+                          to evaluate the target.
+                        properties:
+                          atLeast:
+                            description: |-
+                              Validate the target if at least N objects matches other validator. If no validator are provided, will check if
+                              at least N object was found. If not specified alongside other validator, all found objects must match them.
+                            type: integer
+                          matchCondition:
+                            description: Desired condition of the resources.
+                            properties:
+                              status:
+                                description: Type of the kubernetes conditions. By
+                                  default, "True"
+                                type: string
+                              type:
+                                description: Type of the kubernetes conditions.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                        type: object
+                        x-kubernetes-validations:
+                        - message: The validator must have exactly one key.
+                          rule: '(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition)
+                            ? 1 : 0) == 1'
+                      type: array
                   required:
-                  - apiVersion
-                  - kind
-                  - targetName
+                  - name
+                  - selector
                   type: object
                 minItems: 1
                 type: array
