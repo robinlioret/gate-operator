@@ -6,13 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: clustergate-sample-1
 spec:
-  requeueAfter: 60s
   targets:
-    - name: CoreDns
-      selector:
+    - selector:
         apiVersion: apps/v1
         kind: Deployment
         namespace: kube-system
         name: coredns
-      validators:
-        - atLeast: 1
