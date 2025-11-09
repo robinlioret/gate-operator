@@ -88,7 +88,7 @@ The gate will open if at least N objects were selected regardless of their state
 
 The gate will open if at least 1 object was found and all the objects validate the validators.
 
-Per example: all the pod matching the label "app" = "my-app" has a Ready condition to true. The minimum at 1 protects against "false opening" when resources are not yes deployed.
+Per example: all the pod matching the label "app" = "my-app" has a Ready condition to true. The minimum at 1 protects against "false opening" when resources are not yet deployed.
 
 3. Two or more validator(s) with atLeast
 
