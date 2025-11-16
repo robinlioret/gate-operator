@@ -81,4 +81,4 @@ networkPolicy:
 
 # [WEBHOOK]: To enable webhook
 webhook:
-  enabled: false
+  enable: false
