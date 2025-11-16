@@ -13,7 +13,7 @@ kubectl apply -f https://raw.githubusercontent.com/robinlioret/gate-operator/ref
 ### Using the Helm chart
 
 ```shell
-helm upgrade --install ghcr.io/robinlioret/gate-operator/gate-operator:0.0.4 gate-operator
+helm upgrade --install gate-operator oci://ghcr.io/robinlioret/gate-operator/gate-operator:0.0.4
 ```
 
 Possible values can be found here: https://github.com/robinlioret/gate-operator/blob/main/dist/chart/values.yaml
