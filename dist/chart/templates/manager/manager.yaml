@@ -21,13 +21,13 @@ spec:
                 app.kubernetes.io/name: gate-operator
                 control-plane: controller-manager
         spec:
-            {{- with .Values.controllerManager.tolerations }}
+            {{- with .Values.manager.tolerations }}
             tolerations: {{ toYaml . | nindent 8 }}
             {{- end }}
-            {{- with .Values.controllerManager.nodeSelector }}
+            {{- with .Values.manager.nodeSelector }}
             nodeSelector: {{ toYaml . | nindent 8 }}
             {{- end }}
-            {{- with .Values.controllerManager.affinity }}
+            {{- with .Values.manager.affinity }}
             affinity: {{ toYaml . | nindent 8 }}
             {{- end }}
             containers:
