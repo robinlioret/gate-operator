@@ -22,13 +22,13 @@ spec:
                 control-plane: controller-manager
         spec:
             {{- with .Values.manager.tolerations }}
-            tolerations: {{ toYaml . | nindent 8 }}
+            tolerations: {{ toYaml . | nindent 16 }}
             {{- end }}
             {{- with .Values.manager.nodeSelector }}
-            nodeSelector: {{ toYaml . | nindent 8 }}
+            nodeSelector: {{ toYaml . | nindent 16 }}
             {{- end }}
             {{- with .Values.manager.affinity }}
-            affinity: {{ toYaml . | nindent 8 }}
+            affinity: {{ toYaml . | nindent 16 }}
             {{- end }}
             containers:
                 - args:
