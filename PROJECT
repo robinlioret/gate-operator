@@ -8,6 +8,9 @@ layout:
 - go.kubebuilder.io/v4
 plugins:
   helm.kubebuilder.io/v1-alpha: {}
+  helm.kubebuilder.io/v2-alpha:
+    manifests: dist/install.yaml
+    output: dist
 projectName: gate-operator
 repo: github.com/robinlioret/gate-operator
 resources:
