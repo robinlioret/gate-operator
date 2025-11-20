@@ -13,7 +13,7 @@ jobs:
     if: github.repository == 'robinlioret/gate-operator'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Configure Git Credentials
         run: |
           git config user.name github-actions[bot]
