@@ -1,4 +1,4 @@
-name: Release Helm Chart to GHCR
+name: chart-release
 
 on:
   push:

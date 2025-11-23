@@ -1,4 +1,4 @@
-name: doc.yml
+name: doc
 on:
   push:
     branches:
