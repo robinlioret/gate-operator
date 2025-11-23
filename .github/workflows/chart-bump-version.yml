@@ -1,0 +1,54 @@
+name: chart-bump-version
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_version:
+        description: 'New chart version (e.g. 1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write  # for creating PRs and pushing changes
+  pull-requests: write  # for opening PRs
+
+jobs:
+  bump-version:
+    name: Bump version
+    runs-on: ubuntu-latest
+    if: |
+      ${{github.repository == 'robinlioret/gate-operator' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.1.0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install kubebuilder
+        run: |
+          curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
+          chmod +x kubebuilder && sudo mv kubebuilder /usr/local/bin/
+          kubebuilder version
+
+      - name: Bump version in chart
+        run: |
+          kubebuilder edit --plugins=v2-alpha
+          git add .
+
+      - name: Bump versions in docs
+        run: |
+          chmod +x hack/chart-bump-version.sh
+          ./hack/chart-bump-version.sh ${{ github.event.inputs.new_version }}
+          git add .
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          commit-message: "docs: bump chart version to v${{ github.event.inputs.new_version }}"
+          title: "docs: bump chart version to v${{ github.event.inputs.new_version }}"
+          body: "Automated PR to bump chart versions."
+          branch: "chart-bump-version/v${{ github.event.inputs.new_version }}"
+          delete-branch: true
