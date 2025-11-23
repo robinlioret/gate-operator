@@ -1,0 +1,48 @@
+name: bump-version
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_version:
+        description: 'New version (e.g. 1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write  # for creating PRs and pushing changes
+  pull-requests: write  # for opening PRs
+
+jobs:
+  bump-version:
+    name: Bump version
+    runs-on: ubuntu-latest
+    if: |
+      ${{github.repository == 'robinlioret/gate-operator' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.1.0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump versions in docs
+        run: |
+          chmod +x hack/bump-version.sh
+          ./hack/bump-version.sh ${{ github.event.inputs.new_version }}
+          git add .
+
+      - name: Bump versions in build installer
+        run: |
+          make build-installer IMG=ghcr.io/robinlioret/gate-operator:v${{ github.event.inputs.new_version }}
+          git add .
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          commit-message: "docs: bump version to v${{ github.event.inputs.new_version }}"
+          title: "docs: bump version to v${{ github.event.inputs.new_version }}"
+          body: "Automated PR to bump versions."
+          branch: "bump-version/v${{ github.event.inputs.new_version }}"
+          delete-branch: true
