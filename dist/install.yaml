@@ -1031,6 +1031,7 @@ spec:
         app.kubernetes.io/name: gate-operator
         control-plane: controller-manager
     spec:
+      affinity: {}
       containers:
       - args:
         - --metrics-bind-address=:8443
@@ -1074,12 +1075,14 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-certs
           readOnly: true
+      nodeSelector: {}
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       serviceAccountName: gate-operator-controller-manager
       terminationGracePeriodSeconds: 10
+      tolerations: []
       volumes:
       - name: webhook-certs
         secret:
