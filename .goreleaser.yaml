@@ -30,7 +30,8 @@ builds:
       - -extldflags="-static"
 
 dockers_v2:
-  - ids:
+  - id: container
+    ids:
       - gate-operator
     images:
       - ghrc.io/robinlioret/gate-operator
@@ -44,6 +45,7 @@ dockers_v2:
       org.opencontainers.image.version: "{{.Version}}"
     platforms:
       - linux/amd64
+    sbom: true
 
 archives:
   - id: binary
