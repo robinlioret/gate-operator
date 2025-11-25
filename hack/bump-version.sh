@@ -12,15 +12,7 @@ fi
 
 NEW_VERSION="$1"
 
-# Portable sed replacement: write to temp file, then move back
-sed_replace() {
-  local pattern="$1"
-  local file="$2"
-  local tmpfile="${file}.tmp.$$"
-  sed "$pattern" "$file" > "$tmpfile" && mv "$tmpfile" "$file"
-}
-
 # Replace all occurrences of vX.Y.Z with the new version (vNEW_VERSION)
-sed_replace "s/v[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}/v$NEW_VERSION/g" .version
+sed -Ei "s/v[0-9]+\.[0-9]+\.[0-9]+/v$NEW_VERSION/g" .version
 
 echo "Bumped manifest versions to v$NEW_VERSION in docs."
