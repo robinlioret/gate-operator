@@ -10,7 +10,7 @@ before:
     - go mod download
     - make manifests
     - make generate
-    - make build-installer IMG=ghrc.io/robinlioret/gate-operator:{{ .Tag }}
+    - make build-installer IMG=ghcr.io/robinlioret/gate-operator:{{ .Tag }}
 
 builds:
   - id: gate-operator
@@ -34,7 +34,7 @@ dockers_v2:
     ids:
       - gate-operator
     images:
-      - ghrc.io/robinlioret/gate-operator
+      - ghcr.io/robinlioret/gate-operator
     tags:
       - "latest"
       - "v{{ .Version }}"
@@ -74,7 +74,7 @@ release:
 
     ### Container images
 
-    - ghrc.io/robinlioret/gate-operator:{{ .Tag }}
+    - ghcr.io/robinlioret/gate-operator/gate-operator:{{ .Tag }}
 
   footer: |
     **Full Changelog**: https://github.com/robinlioret/gate-operator/compare/{{ .PreviousTag }}...{{ .Tag }}
