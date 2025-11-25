@@ -12,7 +12,6 @@ permissions:
   contents: write  # for creating PRs and pushing changes
   pull-requests: write  # for opening PRs
 
-
 jobs:
   bump-version:
     name: Bump version
