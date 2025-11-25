@@ -27,12 +27,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract version from .version-chart file
-        id: extract_version
-        run: |
-          VERSION=$(cat .version-chart)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Set up Helm
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:
@@ -55,7 +49,7 @@ jobs:
       - name: Push Helm chart to GHCR
         working-directory: ./dist/chart
         run: |
-          CHART_FILE="gate-operator-${{ steps.version.outputs.version }}.tgz"
+          CHART_FILE="gate-operator-$(cat ../../.version-chart).tgz"
           OCI_URL="oci://ghcr.io/${{ github.repository }}"
           
           echo "Pushing $CHART_FILE to $OCI_URL"
