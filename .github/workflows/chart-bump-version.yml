@@ -12,6 +12,7 @@ permissions:
   contents: write  # for creating PRs and pushing changes
   pull-requests: write  # for opening PRs
 
+
 jobs:
   bump-version:
     name: Bump version
@@ -36,6 +37,7 @@ jobs:
       - name: Bump version in chart
         run: |
           IMG=ghcr.io/robinlioret/gate-operator:$(cat .version) kubebuilder edit --plugins=helm/v2-alpha
+          rm .github/workflows/test-chart.yml
           git add .
 
       - name: Bump versions in docs
