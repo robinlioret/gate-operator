@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/robinlioret/gate-operator
-  newTag: v0.0.6-rc6
+  newTag: v0.0.6
