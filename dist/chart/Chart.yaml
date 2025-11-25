@@ -1,5 +1,5 @@
 apiVersion: v2
-name: gate-operator
+name: chart
 description: A Helm chart to distribute the project gate-operator
 type: application
 version: 0.1.0
