@@ -1040,7 +1040,7 @@ spec:
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
         command:
         - /manager
-        image: ghrc.io/robinlioret/gate-operator:latest
+        image: ghcr.io/robinlioret/gate-operator:v0.0.6-rc3
         livenessProbe:
           httpGet:
             path: /healthz
