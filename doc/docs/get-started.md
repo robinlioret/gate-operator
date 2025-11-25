@@ -2,6 +2,10 @@
 
 ## Installation
 
+### Prerequisite
+
+You'll need to have a valid installation of [Cert-Manager](https://cert-manager.io/docs/installation/).
+
 ### Using the YAML installer
 
 Run the following command: 
