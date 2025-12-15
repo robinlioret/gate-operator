@@ -1,0 +1,78 @@
+name: Bug Report
+description: Problems and issues with code or docs
+labels:
+  - kind/bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Welcome to Gate-Operator!
+        
+        For a smooth issue process, try to answer the following questions.
+        Don't worry if they're not all applicable; just try to include what you can :smile:
+        
+        If you need to include code snippets or logs, please put them in fenced code
+        blocks, and if they're really long, use the [`<details>` tag][mdn-details], like:
+        
+        <details>
+        
+        <summary>Code & details examples</summary>
+        
+        `````markdown
+        Some code written in Go:
+        
+        ```go
+        type Manager struct {
+          // FixTheBug removes all bugs from controller-runtime
+          FixTheBug bool
+        }
+        ```
+        
+        <details>
+        
+        <summary>Some really long logs</summary>
+        
+        ```
+        ok
+        ok
+        ok
+        SHOOT A BUG HAPPENS HERE OH NO
+        ok
+        ok
+        done
+        ```
+        
+        </details>
+        
+        `````
+        
+        [mdn-details]: ://developer.mozilla.org/en-US/docs/Web/HTML/Element/details 
+
+  - type: textarea
+    attributes:
+      label: What broke? What's expected?
+      description: |
+        Describe what didn't go the way you thought it would.
+        Please include *full* & *exact* error messages if you can!
+        
+        If you have an idea of what went wrong, feel free to include that
+        as well.
+    validations: {required: true}
+
+  - type: textarea
+    attributes:
+      label: Reproducing this issue
+      description:
+        If you have simple reproduction steps, or a minimal reproducer code
+        snippet, please include it here.
+        
+        If they're already described above, no need to duplicate it here :smile:.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## What versions are you using?
+        
+        Please specify the relevant versions and sources for the pieces of
+        kubebuilder that you're using.  The more details you can provide, the
+        better.
