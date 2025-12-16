@@ -303,20 +303,34 @@ var _ = Describe("Manager", Ordered, func() {
 
 		// +kubebuilder:scaffold:e2e-webhooks-checks
 
-		It("should deploy the gate", func() {
+		It("should should keep gate with invalid target closed", func() {
 			By("deploying the gate")
 			_, err := utils.Run(exec.Command("kubectl", "apply", "-f", "test/data/closed-gate.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 
-			By("checking if the gate remained closed", func() {
-				output, err := utils.Run(exec.Command("kubectl", "get", "gates", "closed-gate", "-o", "jsonpath={.status.state}"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(output).To(ContainSubstring("Closed"))
-			})
-
-			By("removing the gate")
-			_, err = utils.Run(exec.Command("kubectl", "delete", "gate", "closed-gate"))
+			By("checking if the gate remained closed")
+			output, err := utils.Run(exec.Command("kubectl", "get", "gates", "closed-gate", "-o", "jsonpath={.status.state}"))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("Closed"))
+		})
+
+		It("should run a basic gate for a job successfully", func() {
+			By("deploying the resources")
+			_, err := utils.Run(exec.Command("kubectl", "apply", "-f", "test/data/job-gate.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+
+			By("checking if the gate is closed")
+			output, err := utils.Run(exec.Command("kubectl", "get", "gates", "job-gate", "-o", "jsonpath={.status.state}"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("Closed"))
+
+			By("Waiting for the gate to opens")
+			verifyGateOpened := func(g Gomega) {
+				output, err := utils.Run(exec.Command("kubectl", "get", "gates", "job-gate", "-o", "jsonpath={.status.state}"))
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("Opened"))
+			}
+			Eventually(verifyGateOpened, "5m", "5s").Should(Succeed())
 		})
 	})
 })
