@@ -1,0 +1,29 @@
+apiVersion: gate.sh/v1alpha1
+kind: Gate
+metadata:
+  name: job-gate
+spec:
+  requeueAfter: 5s
+  targets:
+    - name: Job
+      selector:
+        apiVersion: batch/v1
+        kind: Job
+        name: job-gate
+      validators:
+        - matchCondition:
+            type: "Complete"
+            status: "True"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job-gate
+spec:
+  template:
+    spec:
+      containers:
+        - name: wait
+          image: busybox
+          command: ["sleep",  "15"]
+      restartPolicy: Never
