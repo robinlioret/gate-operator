@@ -1,0 +1,11 @@
+apiVersion: gate.sh/v1alpha1
+kind: Gate
+metadata:
+  name: closed-gate
+spec:
+  targets:
+    - name: NotFound
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: not-found
