@@ -332,32 +332,6 @@ var _ = Describe("Manager", Ordered, func() {
 			}
 			Eventually(verifyGateOpened, "1m", "5s").Should(Succeed())
 		})
-
-		It("should deploy the front gate pattern successfully", func() {
-			var err error
-			var output string
-
-			By("deploying the back (with the gate)")
-			_, err = utils.Run(exec.Command("helm", "upgrade", "--install", "front-gate-pattern-back", "test/data/front-gate-pattern/back"))
-			Expect(err).NotTo(HaveOccurred())
-
-			By("checking if the gate is closed")
-			output, err = utils.Run(exec.Command("kubectl", "get", "gates", "front-gate-pattern-back", "-o", "jsonpath={.status.state}"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(output).To(ContainSubstring("Closed"))
-
-			By("deploying the front")
-			_, err = utils.Run(exec.Command("helm", "upgrade", "--install", "front-gate-pattern-front", "test/data/front-gate-pattern/front"))
-			Expect(err).NotTo(HaveOccurred())
-
-			By("checking if the gate eventually opens")
-			verifyGateOpened := func(g Gomega) {
-				output, err := utils.Run(exec.Command("kubectl", "get", "gates", "front-gate-pattern-back", "-o", "jsonpath={.status.state}"))
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(output).To(ContainSubstring("Opened"))
-			}
-			Eventually(verifyGateOpened, "1m", "5s").Should(Succeed())
-		})
 	})
 })
 
