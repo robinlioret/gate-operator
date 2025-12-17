@@ -14,11 +14,10 @@ Why is eventual consistency not always achievable is open to discussion. But, it
 ## Solution
 
 To solve this issue, tools exists. ArgoCd, per example, provide SyncWaves and Hooks. However, it is only applicable on the application scope or, more recently, on the ApplicationSet scope. It's a partial solution. 
-In the same way, Helm provides char hooks. But, again, it's only usable in the chart scope.
 
 These limitations make difficult to orchestrate larger workloads spread across multiple charts, applications, etc.
 
-Enters Gate Operator with a simple yet powerful concept to synergize with deployment tools (Helm, etc)
+Enters Gate Operator with a simple yet powerful concept to synergize with deployment tools like ArgoCD
 
 ## Concept
 
@@ -105,5 +104,6 @@ flowchart LR
 
 ## Synergy
 
-- Helm: a gate can be integrated in an application chart with the annotation `helm.sh/hook: pre-install` to prevent the creation of the chart resource before other resources are up and running.
+As of now, the only known synergy is with ArgoCD.
+
 - ArgoCD: same thing with Hook or SyncWaves. SyncWaves allows a gate to "pause" the deployment in the middle.

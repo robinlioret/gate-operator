@@ -48,8 +48,6 @@ metadata:
   name: wait-for-aws-lbc
   namespace: my-app-namespace
   annotations:
-    # For Helm
-    # TODO: Add helm annotations
     # For ArgoCD
     argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: HookSucceeded
@@ -126,8 +124,6 @@ kind: ClusterGate
 metadata:
   name: aws-lbc-ready
   annotations:
-    # For Helm
-    # TODO: Add helm annotations
     # For ArgoCD
     argocd.argoproj.io/hook: PostSync
 spec:
@@ -162,8 +158,6 @@ metadata:
   name: wait-for-aws-lbc
   namespace: my-app-namespace
   annotations:
-    # For Helm
-    # TODO: Add helm annotations
     # For ArgoCD
     argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: HookSucceeded
