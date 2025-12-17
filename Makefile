@@ -82,7 +82,7 @@ setup-test-e2e: ## Set up a Kind cluster for e2e tests if it does not exist
 	esac
 
 .PHONY: test-e2e
-test-e2e: setup-test-e2e build-snapshot ## Run the e2e tests. Expected an isolated environment using Kind.
+test-e2e: setup-test-e2e build-snapshot helm ## Run the e2e tests. Expected an isolated environment using Kind.
 	$(CONTAINER_TOOL) tag ghcr.io/robinlioret/gate-operator:latest-amd64 example.com/gate-operator:e2e
 	$(KIND) load docker-image -n $(KIND_CLUSTER) example.com/gate-operator:e2e
 	KIND=$(KIND) KIND_CLUSTER=$(KIND_CLUSTER) go test -tags=e2e ./test/e2e/ -v -ginkgo.v
@@ -164,11 +164,13 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 GORELEASER = $(LOCALBIN)/goreleaser
+HELM = $(LOCALBIN)/helm
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.7.1
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 GORELEASER_VERSION ?= v2.12.7
+HELM_VERSION ?= v3.19.4
 
 #ENVTEST_VERSION is the version of controller-runtime release branch to fetch the envtest setup script (i.e. release-0.20)
 ENVTEST_VERSION ?= $(shell v='$(call gomodver,sigs.k8s.io/controller-runtime)'; \
@@ -213,6 +215,11 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 goreleaser: $(GORELEASER) ## Download goreleaser locally if necessayr
 $(GORELEASER): $(LOCALBIN)
 	$(call go-install-tool,$(GORELEASER),github.com/goreleaser/goreleaser/v2,$(GORELEASER_VERSION))
+
+.PHONY: helm
+helm: $(HELM) ## Download helm locally if necessayr
+$(HELM): $(LOCALBIN)
+	$(call go-install-tool,$(HELM),helm.sh/helm/v3/cmd/helm,$(HELM_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
