@@ -5,7 +5,7 @@ metadata:
     labels:
         app.kubernetes.io/managed-by: {{ .Release.Service }}
         app.kubernetes.io/name: gate-operator
-    name: metrics-certs
+    name: gate-operator-metrics-certs
     namespace: {{ .Release.Namespace }}
 spec:
     dnsNames:
@@ -13,6 +13,6 @@ spec:
         - {{ include "chart.serviceName" (dict "suffix" "controller-manager-metrics-service" "context" .) }}.{{ include "chart.namespaceName" . }}.svc.cluster.local
     issuerRef:
         kind: Issuer
-        name: selfsigned-issuer
+        name: {{ include "chart.name" . }}-selfsigned-issuer
     secretName: metrics-server-cert
 {{- end }}

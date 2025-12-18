@@ -5,7 +5,7 @@ metadata:
     labels:
         app.kubernetes.io/managed-by: {{ .Release.Service }}
         app.kubernetes.io/name: gate-operator
-    name: selfsigned-issuer
+    name: gate-operator-selfsigned-issuer
     namespace: {{ .Release.Namespace }}
 spec:
     selfSigned: {}

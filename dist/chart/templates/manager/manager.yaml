@@ -21,9 +21,7 @@ spec:
                 app.kubernetes.io/name: gate-operator
                 control-plane: controller-manager
         spec:
-            {{- with .Values.manager.affinity }}
-            affinity: {{ toYaml . | nindent 14 }}
-            {{- end }}
+            affinity: {}
             containers:
                 - args:
                     {{- if .Values.metrics.enable }}
@@ -78,9 +76,7 @@ spec:
                       name: webhook-certs
                       readOnly: true
                     {{- end }}
-            {{- with .Values.manager.nodeSelector }}
-            nodeSelector: {{ toYaml . | nindent 14 }}
-            {{- end }}
+            nodeSelector: {}
             securityContext:
               {{- if .Values.manager.podSecurityContext }}
               {{- toYaml .Values.manager.podSecurityContext | nindent 14 }}
@@ -89,9 +85,7 @@ spec:
               {{- end }}
             serviceAccountName: gate-operator-controller-manager
             terminationGracePeriodSeconds: 10
-            {{- with .Values.manager.tolerations }}
-            tolerations: {{ toYaml . | nindent 14 }}
-            {{- end }}
+            tolerations: []
             volumes:
                 {{- if .Values.certManager.enable }}
                 - name: webhook-certs
