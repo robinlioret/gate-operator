@@ -3,7 +3,7 @@ kind: ValidatingWebhookConfiguration
 metadata:
     annotations:
         {{- if .Values.certManager.enable }}
-        cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/gate-operator-serving-cert
+        cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/serving-cert
         {{- end }}
     name: gate-operator-validating-webhook-configuration
 webhooks:
