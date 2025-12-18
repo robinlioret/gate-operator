@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-openapi/jsonpointer"
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -326,4 +327,24 @@ func (g *GateCommonReconciler) GetObjectStatusConditions(obj client.Object) ([]m
 	}
 
 	return conditionList, nil
+}
+
+func (g *GateCommonReconciler) GetObjectFieldByJsonPointer(obj client.Object, jsonPointer string) (interface{}, error) {
+	unstrObj, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("expected unstructured.Unstructured, got %T", obj)
+	}
+
+	pointer, err := jsonpointer.New(jsonPointer)
+	if err != nil {
+		return nil, fmt.Errorf("invalid pointer: %s", err)
+	}
+
+	data := unstrObj.UnstructuredContent()
+	value, _, err := pointer.Get(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get value: %s", err)
+	}
+
+	return value, nil
 }

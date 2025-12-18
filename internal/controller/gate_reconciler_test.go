@@ -1074,6 +1074,38 @@ var _ = Describe("GateCommonReconciler", func() {
 		})
 	})
 
+	Describe("GetObjectFieldByJsonPointer", func() {
+		It("should extract field from json pointer", func() {
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"health": map[string]any{
+							"state": "progressing",
+						},
+					},
+				},
+			}
+
+			reconciler := GateCommonReconciler{}
+			value, err := reconciler.GetObjectFieldByJsonPointer(obj, "/status/health/state")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(value).To(Equal("progressing"))
+		})
+
+		It("should return an error if the pointer points to nothing", func() {
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{},
+				},
+			}
+
+			reconciler := GateCommonReconciler{}
+			value, err := reconciler.GetObjectFieldByJsonPointer(obj, "/status/health/state")
+			Expect(err).To(HaveOccurred())
+			Expect(value).To(BeNil())
+		})
+	})
+
 	Describe("ComputeOperation", func() {
 		var reconciler GateCommonReconciler
 		BeforeEach(func() {
