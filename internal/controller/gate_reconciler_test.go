@@ -155,6 +155,165 @@ var _ = Describe("GateCommonReconciler", func() {
 			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("condition Ready is wrong (expected True, got False)"))
 		})
 
+		It("should open the gate for a single target by name with matching jsonpointer", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									JsonPointer: gateshv1alpha1.GateTargetValidatorJsonPointer{
+										JsonPointer: "/metadata/name",
+										Value:       "target-pod",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionTrue))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionFalse))
+		})
+
+		It("should close the gate for a single target by name with non-matching jsonpointer", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									JsonPointer: gateshv1alpha1.GateTargetValidatorJsonPointer{
+										JsonPointer: "/metadata/name",
+										Value:       "no-name",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionFalse))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionTrue))
+		})
+
+		It("should close the gate for a single target by name with a missing jsonpointer", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									JsonPointer: gateshv1alpha1.GateTargetValidatorJsonPointer{
+										JsonPointer: "/metadata/not-found",
+										Value:       "target-pod",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionFalse))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionTrue))
+		})
+
 		It("should close the gate if no objects are found for a target", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
@@ -1101,6 +1260,19 @@ var _ = Describe("GateCommonReconciler", func() {
 
 			reconciler := GateCommonReconciler{}
 			value, err := reconciler.GetObjectFieldByJsonPointer(obj, "/status/health/state")
+			Expect(err).To(HaveOccurred())
+			Expect(value).To(BeNil())
+		})
+
+		It("should return an error if the pointer is invalid", func() {
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{},
+				},
+			}
+
+			reconciler := GateCommonReconciler{}
+			value, err := reconciler.GetObjectFieldByJsonPointer(obj, "invalid.pointer")
 			Expect(err).To(HaveOccurred())
 			Expect(value).To(BeNil())
 		})

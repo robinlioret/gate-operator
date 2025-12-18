@@ -81,8 +81,17 @@ type GateTargetValidatorMatchCondition struct {
 	Status metav1.ConditionStatus `json:"status"`
 }
 
+// GateTargetValidatorJsonPointer defines a condition based on a field in the target's manifest matching a value
+type GateTargetValidatorJsonPointer struct {
+	// Pointer to the desired field
+	JsonPointer string `json:"jsonPointer"`
+
+	// Value to compare to
+	Value string `json:"value"`
+}
+
 // GateTargetValidator defines a part of the logic to evaluate the target.
-// // +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) == 1",message="The validator must have exactly one key."
+// // +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) + (has(self.jsonPointer) ? 1 : 0) == 1",message="The validator must have exactly one key."
 type GateTargetValidator struct {
 	// Validate the target if at least N objects matches other validator. If no validator are provided, will check if
 	// at least N object was found. If not specified alongside other validator, all found objects must match them.
@@ -92,6 +101,10 @@ type GateTargetValidator struct {
 	// Desired condition of the resources.
 	// +optional
 	MatchCondition GateTargetValidatorMatchCondition `json:"matchCondition,omitempty,omitzero"`
+
+	// JSON pointer to a field
+	// +optional
+	JsonPointer GateTargetValidatorJsonPointer `json:"jsonPointer,omitempty,omitzero"`
 }
 
 // GateTarget defines the conditions for the gate to be available
