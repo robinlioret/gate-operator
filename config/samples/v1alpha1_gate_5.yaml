@@ -1,0 +1,19 @@
+apiVersion: gate.sh/v1alpha1
+kind: Gate
+metadata:
+  labels:
+    app.kubernetes.io/name: gate-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: gate-sample-5-jsonpointer
+  namespace: kube-system
+spec:
+  targets:
+    - name: SameNs
+      selector:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: coredns
+      validators:
+        - jsonPointer:
+            pointer: /metadata/name
+            value: coredns

@@ -44,3 +44,26 @@ spec:
         - matchCondition:
             type: Opened
 ```
+
+## ArgoCD Application waiter
+
+This gate will open if the argocd application `status.health.status` is set to `Healthy`
+
+```yaml
+apiVersion: gate.sh/v1alpha1
+kind: Gate
+metadata:
+  name: wait-for-other-gates
+spec:
+  targets:
+    - name: Application
+      selector:
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        name: my-app
+        namespace: gitops
+      validators:
+        - jsonPointer:
+            pointer: /status/health/status
+            value: Healthy
+```

@@ -84,7 +84,7 @@ type GateTargetValidatorMatchCondition struct {
 // GateTargetValidatorJsonPointer defines a condition based on a field in the target's manifest matching a value
 type GateTargetValidatorJsonPointer struct {
 	// Pointer to the desired field
-	JsonPointer string `json:"jsonPointer"`
+	Pointer string `json:"pointer"`
 
 	// Value to compare to
 	Value string `json:"value"`

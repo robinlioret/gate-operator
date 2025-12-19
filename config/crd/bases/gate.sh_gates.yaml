@@ -161,14 +161,14 @@ spec:
                           jsonPointer:
                             description: JSON pointer to a field
                             properties:
-                              jsonPointer:
+                              pointer:
                                 description: Pointer to the desired field
                                 type: string
                               value:
                                 description: Value to compare to
                                 type: string
                             required:
-                            - jsonPointer
+                            - pointer
                             - value
                             type: object
                           matchCondition:
