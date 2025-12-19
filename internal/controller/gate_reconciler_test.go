@@ -171,8 +171,8 @@ var _ = Describe("GateCommonReconciler", func() {
 							Validators: []gateshv1alpha1.GateTargetValidator{
 								{
 									JsonPointer: gateshv1alpha1.GateTargetValidatorJsonPointer{
-										JsonPointer: "/metadata/name",
-										Value:       "target-pod",
+										Pointer: "/metadata/name",
+										Value:   "target-pod",
 									},
 								},
 							},
@@ -224,8 +224,8 @@ var _ = Describe("GateCommonReconciler", func() {
 							Validators: []gateshv1alpha1.GateTargetValidator{
 								{
 									JsonPointer: gateshv1alpha1.GateTargetValidatorJsonPointer{
-										JsonPointer: "/metadata/name",
-										Value:       "no-name",
+										Pointer: "/metadata/name",
+										Value:   "no-name",
 									},
 								},
 							},
@@ -277,8 +277,8 @@ var _ = Describe("GateCommonReconciler", func() {
 							Validators: []gateshv1alpha1.GateTargetValidator{
 								{
 									JsonPointer: gateshv1alpha1.GateTargetValidatorJsonPointer{
-										JsonPointer: "/metadata/not-found",
-										Value:       "target-pod",
+										Pointer: "/metadata/not-found",
+										Value:   "target-pod",
 									},
 								},
 							},

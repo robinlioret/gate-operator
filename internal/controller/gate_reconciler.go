@@ -104,7 +104,7 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 		if validator.MatchCondition.Type != "" {
 			message = g.EvaluateTargetMatchCondition(objects, results, message, validator)
 		}
-		if validator.JsonPointer.JsonPointer != "" {
+		if validator.JsonPointer.Pointer != "" {
 			message = g.EvaluateTargetJsonPointer(objects, results, message, validator)
 		}
 	}
@@ -150,16 +150,16 @@ func (g *GateCommonReconciler) EvaluateTargetMatchCondition(objects []unstructur
 
 func (g *GateCommonReconciler) EvaluateTargetJsonPointer(objects []unstructured.Unstructured, results []bool, message []string, validator gateshv1alpha1.GateTargetValidator) []string {
 	for idx, object := range objects {
-		fieldValue, err := g.GetObjectFieldByJsonPointer(&object, validator.JsonPointer.JsonPointer)
+		fieldValue, err := g.GetObjectFieldByJsonPointer(&object, validator.JsonPointer.Pointer)
 		if err != nil {
 			results[idx] = false
-			message = append(message, fmt.Sprintf("[%s] error while fetching field value JsonPointer %s: %s", g.GetObjectName(object), validator.JsonPointer.JsonPointer, err.Error()))
+			message = append(message, fmt.Sprintf("[%s] error while fetching field value for the JSON Pointer %s: %s", g.GetObjectName(object), validator.JsonPointer.Pointer, err.Error()))
 			continue
 		}
 
 		if fieldValue != validator.JsonPointer.Value {
 			results[idx] = false
-			message = append(message, fmt.Sprintf("[%s] field value not matching expected for JsonPointer %s '%s', got '%s'", g.GetObjectName(object), validator.JsonPointer.JsonPointer, validator.JsonPointer.Value, fieldValue))
+			message = append(message, fmt.Sprintf("[%s] field value not matching expected for the JSON Pointer %s '%s', got '%s'", g.GetObjectName(object), validator.JsonPointer.Pointer, validator.JsonPointer.Value, fieldValue))
 			continue
 		}
 	}
