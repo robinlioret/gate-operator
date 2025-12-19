@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-openapi/jsonpointer"
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -103,7 +104,9 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 		if validator.MatchCondition.Type != "" {
 			message = g.EvaluateTargetMatchCondition(objects, results, message, validator)
 		}
-		// Here add more validator logic
+		if validator.JsonPointer.JsonPointer != "" {
+			message = g.EvaluateTargetJsonPointer(objects, results, message, validator)
+		}
 	}
 
 	result, message := g.ComputeTargetEvaluationResult(atLeast, results, message)
@@ -139,6 +142,24 @@ func (g *GateCommonReconciler) EvaluateTargetMatchCondition(objects []unstructur
 		if condition.Status != validator.MatchCondition.Status {
 			results[idx] = false
 			message = append(message, fmt.Sprintf("[%s] condition %s is wrong (expected %s, got %s)", g.GetObjectName(object), validator.MatchCondition.Type, string(validator.MatchCondition.Status), string(condition.Status)))
+			continue
+		}
+	}
+	return message
+}
+
+func (g *GateCommonReconciler) EvaluateTargetJsonPointer(objects []unstructured.Unstructured, results []bool, message []string, validator gateshv1alpha1.GateTargetValidator) []string {
+	for idx, object := range objects {
+		fieldValue, err := g.GetObjectFieldByJsonPointer(&object, validator.JsonPointer.JsonPointer)
+		if err != nil {
+			results[idx] = false
+			message = append(message, fmt.Sprintf("[%s] error while fetching field value JsonPointer %s: %s", g.GetObjectName(object), validator.JsonPointer.JsonPointer, err.Error()))
+			continue
+		}
+
+		if fieldValue != validator.JsonPointer.Value {
+			results[idx] = false
+			message = append(message, fmt.Sprintf("[%s] field value not matching expected for JsonPointer %s '%s', got '%s'", g.GetObjectName(object), validator.JsonPointer.JsonPointer, validator.JsonPointer.Value, fieldValue))
 			continue
 		}
 	}
@@ -326,4 +347,24 @@ func (g *GateCommonReconciler) GetObjectStatusConditions(obj client.Object) ([]m
 	}
 
 	return conditionList, nil
+}
+
+func (g *GateCommonReconciler) GetObjectFieldByJsonPointer(obj client.Object, jsonPointer string) (interface{}, error) {
+	unstrObj, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("expected unstructured.Unstructured, got %T", obj)
+	}
+
+	pointer, err := jsonpointer.New(jsonPointer)
+	if err != nil {
+		return nil, fmt.Errorf("invalid pointer: %s", err)
+	}
+
+	data := unstrObj.UnstructuredContent()
+	value, _, err := pointer.Get(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get value: %s", err)
+	}
+
+	return value, nil
 }
