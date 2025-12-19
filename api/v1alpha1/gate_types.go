@@ -163,7 +163,7 @@ type GateSpec struct {
 
 	// Defines the duration between evaluations of a Gate. By default, 60 seconds
 	// +optional
-	RequeueAfter *metav1.Duration `json:"requeueAfter,omitempty"`
+	EvaluationPeriod *metav1.Duration `json:"evaluationPeriod,omitempty"`
 
 	// Defines the consolidation policy of a Gate. By default, at least 1 valid evaluation.
 	// +optional
@@ -195,10 +195,6 @@ type GateStatus struct {
 	// List of the targets conditions
 	// +optional
 	TargetConditions []metav1.Condition `json:"targetConditions,omitempty"`
-
-	// lastSuccessfulEvaluation defines when was the last time the gate was successfully evaluated.
-	// +optional
-	NextEvaluation metav1.Time `json:"nextEvaluation,omitempty"`
 
 	// Easy access field representing the gate's condition
 	// +optional

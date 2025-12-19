@@ -62,9 +62,15 @@ spec:
     # Must be And or Or
     operator: And
   # (Optional) Default to 1 minutes (1m0s)
-  # Delay between two evaluations
+  # Delay between two evaluations when the gate is opened
   # WARNING: subject to change
-  requeueAfter: 53s
+  evaluationPeriod: 53s
+  # (Optional) Consolidation when looking for opening the gate
+  consolidation:
+    # (Optional) Number of consecutive valid evaluation to consider the gate opened. Default to 1
+    count: 3
+    # (Optional) Delay between two evaluation when the gate is closed. Default to 10s.
+    delay: 5s
 # (Managed) status field with the computed resources on the gate
 status:
   # Quick representation of the gate's status

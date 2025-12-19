@@ -21,9 +21,10 @@ import (
 type TargetConditionReason string
 
 type GateCommonReconciler struct {
-	Context context.Context
-	Client  client.Client
-	Gate    *gateshv1alpha1.Gate
+	Context      context.Context
+	Client       client.Client
+	Gate         *gateshv1alpha1.Gate
+	RequeueAfter time.Duration
 }
 
 type TargetObjectResult struct {
@@ -55,12 +56,14 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 	if result {
 		g.Gate.Status.ConsecutiveValidEvaluations += 1
 		if g.Gate.Status.ConsecutiveValidEvaluations >= g.Gate.Spec.Consolidation.Count {
+			g.RequeueAfter = g.Gate.Spec.Consolidation.Delay.Duration
 			g.Gate.Status.State = gateshv1alpha1.GateStateOpened
 			message = "Gate was evaluated to true"
 			reason = "GateConditionMet"
 			openedCondition = metav1.ConditionTrue
 			closedCondition = metav1.ConditionFalse
 		} else {
+			g.RequeueAfter = g.Gate.Spec.EvaluationPeriod.Duration
 			g.Gate.Status.State = gateshv1alpha1.GateStateClosed
 			message = fmt.Sprintf("requires %d/%d consecutive valid evaluations to open", g.Gate.Status.ConsecutiveValidEvaluations, g.Gate.Spec.Consolidation.Count)
 			reason = "NotEnoughConsecutiveValidEvaluations"
@@ -69,6 +72,7 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 		}
 	} else {
 		g.Gate.Status.ConsecutiveValidEvaluations = 0
+		g.RequeueAfter = g.Gate.Spec.Consolidation.Delay.Duration
 		g.Gate.Status.State = gateshv1alpha1.GateStateClosed
 		message = "Gate was evaluated to false"
 		reason = "GateConditionNotMet"
@@ -79,8 +83,6 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateOpened, Status: openedCondition, Reason: reason, Message: message})
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateClosed, Status: closedCondition, Reason: reason, Message: message})
 	g.Gate.Status.TargetConditions = targetConditions
-
-	g.Gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(g.Gate.Spec.RequeueAfter.Duration)}
 }
 
 func (g *GateCommonReconciler) EvaluateSpec() (bool, []metav1.Condition) {

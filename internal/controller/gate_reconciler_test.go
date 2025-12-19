@@ -31,7 +31,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pod",
@@ -95,7 +96,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pod",
@@ -159,7 +161,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pod",
@@ -212,7 +215,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pod",
@@ -265,7 +269,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pod",
@@ -318,7 +323,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "non-existent-pod",
@@ -361,7 +367,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Operation: gateshv1alpha1.GateOperation{
 						Operator: gateshv1alpha1.GateOperatorAnd,
 					},
@@ -461,7 +468,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Operation: gateshv1alpha1.GateOperation{
 						Operator: gateshv1alpha1.GateOperatorOr,
 					},
@@ -561,7 +569,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Operation: gateshv1alpha1.GateOperation{
 						Invert: true,
 					},
@@ -623,7 +632,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pods",
@@ -711,7 +721,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pods",
@@ -799,7 +810,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pods",
@@ -850,7 +862,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pods",
@@ -939,7 +952,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pods",
@@ -1028,8 +1042,8 @@ var _ = Describe("GateCommonReconciler", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
-					RequeueAfter:  &metav1.Duration{Duration: 5 * time.Minute},
-					Consolidation: gateshv1alpha1.GateConsolidation{Count: 3},
+					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 3, Delay: &metav1.Duration{Duration: time.Second}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pod",

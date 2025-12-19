@@ -3,7 +3,7 @@ kind: Gate
 metadata:
   name: job-gate
 spec:
-  requeueAfter: 5s
+  evaluationPeriod: 5s
   targets:
     - name: Job
       selector:

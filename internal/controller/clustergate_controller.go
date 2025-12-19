@@ -80,12 +80,12 @@ func (r *ClusterGateReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	gate.Status = gateObject.Status
 	if err != nil {
 		log.Error(err, "unable to reconcile ClusterGate")
-		return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
+		return ctrl.Result{RequeueAfter: gcr.RequeueAfter}, err
 	}
 	if err := r.Status().Update(ctx, &gate); err != nil {
 		log.Error(err, "unable to update ClusterGate")
 	}
-	return ctrl.Result{RequeueAfter: gate.Spec.RequeueAfter.Duration}, err
+	return ctrl.Result{RequeueAfter: gcr.RequeueAfter}, err
 }
 
 // SetupWithManager sets up the controller with the Manager.
