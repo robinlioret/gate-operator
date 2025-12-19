@@ -22,7 +22,7 @@ spec:
                 control-plane: controller-manager
         spec:
             {{- with .Values.manager.affinity }}
-            affinity: {{ toYaml . | nindent 14 }}
+            affinity: {{ toYaml . | nindent 16 }}
             {{- end }}
             containers:
                 - args:
@@ -79,7 +79,7 @@ spec:
                       readOnly: true
                     {{- end }}
             {{- with .Values.manager.nodeSelector }}
-            nodeSelector: {{ toYaml . | nindent 14 }}
+            nodeSelector: {{ toYaml . | nindent 16 }}
             {{- end }}
             securityContext:
               {{- if .Values.manager.podSecurityContext }}
@@ -90,7 +90,7 @@ spec:
             serviceAccountName: gate-operator-controller-manager
             terminationGracePeriodSeconds: 10
             {{- with .Values.manager.tolerations }}
-            tolerations: {{ toYaml . | nindent 14 }}
+            tolerations: {{ toYaml . | nindent 16 }}
             {{- end }}
             volumes:
                 {{- if .Values.certManager.enable }}
