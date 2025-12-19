@@ -15,4 +15,5 @@ spec:
         name: coredns
         namespace: kube-system
       validators:
-        - atLeast: 1
+        - atLeast:
+            count: 1
