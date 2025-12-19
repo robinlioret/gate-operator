@@ -51,6 +51,18 @@ spec:
           spec:
             description: spec defines the desired state of ClusterGate
             properties:
+              consolidation:
+                description: Defines the consolidation policy of a Gate. By default,
+                  at least 1 valid evaluation.
+                properties:
+                  count:
+                    description: Number of consecutive checks to consider the gate
+                      opened.
+                    type: integer
+                  delay:
+                    description: Delay between two checks. By default, it's 10s.
+                    type: string
+                type: object
               operation:
                 description: Indicates how to combine the targets results. By default,
                   they will simply be anded.
@@ -281,6 +293,9 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              consecutiveValidEvaluations:
+                description: Current consecutive valid checks
+                type: integer
               nextEvaluation:
                 description: lastSuccessfulEvaluation defines when was the last time
                   the gate was successfully evaluated.
@@ -399,6 +414,18 @@ spec:
           spec:
             description: spec defines the desired state of Gate
             properties:
+              consolidation:
+                description: Defines the consolidation policy of a Gate. By default,
+                  at least 1 valid evaluation.
+                properties:
+                  count:
+                    description: Number of consecutive checks to consider the gate
+                      opened.
+                    type: integer
+                  delay:
+                    description: Delay between two checks. By default, it's 10s.
+                    type: string
+                type: object
               operation:
                 description: Indicates how to combine the targets results. By default,
                   they will simply be anded.
@@ -629,6 +656,9 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              consecutiveValidEvaluations:
+                description: Current consecutive valid checks
+                type: integer
               nextEvaluation:
                 description: lastSuccessfulEvaluation defines when was the last time
                   the gate was successfully evaluated.
@@ -1080,7 +1110,7 @@ spec:
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
         command:
         - /manager
-        image: ghcr.io/robinlioret/gate-operator:v0.0.5
+        image: controller:latest
         livenessProbe:
           httpGet:
             path: /healthz

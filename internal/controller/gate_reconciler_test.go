@@ -1023,6 +1023,80 @@ var _ = Describe("GateCommonReconciler", func() {
 			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionTrue))
 			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("1/1 valid objects")) // atLeast=1 in message, but result ignores it
 		})
+
+		It("should keep the gate closed even if conditions are met but need multiple consecutive checks", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter:  &metav1.Duration{Duration: 5 * time.Minute},
+					Consolidation: gateshv1alpha1.GateConsolidation{Count: 3},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pod",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								Name:       "target-pod",
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "target-pod",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionFalse))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(1))
+
+			err = reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+			Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(2))
+
+			err = reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionTrue))
+			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionFalse))
+			Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(3))
+		})
 	})
 
 	Describe("FetchGateTargetObjects", func() {
