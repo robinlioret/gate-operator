@@ -4,6 +4,9 @@ metadata:
   name: job-gate
 spec:
   evaluationPeriod: 5s
+  consolidation:
+    count: 3
+    delay: 5s
   targets:
     - name: Job
       selector:
