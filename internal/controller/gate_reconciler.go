@@ -98,9 +98,16 @@ func (g *GateCommonReconciler) EvaluateTarget(target *gateshv1alpha1.GateTarget)
 	}
 
 	for _, validator := range target.Validators {
-		if validator.AtLeast > 0 {
-			atLeast = validator.AtLeast
+		atLeastCount := atLeast
+		if validator.AtLeast.Count > 0 {
+			atLeastCount = validator.AtLeast.Count
 		}
+		atLeastPercent := atLeast
+		if validator.AtLeast.Percent > 0 {
+			atLeastPercent = validator.AtLeast.Percent * len(objects) / 100
+		}
+		atLeast = max(atLeastCount, atLeastPercent, atLeast)
+
 		if validator.MatchCondition.Type != "" {
 			message = g.EvaluateTargetMatchCondition(objects, results, message, validator)
 		}

@@ -54,7 +54,7 @@ var _ = Describe("ClusterGate Controller", func() {
 					},
 					Validators: []gateshv1alpha1.GateTargetValidator{
 						{
-							AtLeast: 1,
+							AtLeast: gateshv1alpha1.GateTargetValidatorAtLeast{Count: 1},
 						},
 					},
 				},

@@ -25,7 +25,7 @@ import (
 )
 
 var DefaultRequeueAfter = &metav1.Duration{Duration: 60 * time.Second}
-var DefaultTargetValidators = []gateshv1alpha1.GateTargetValidator{{AtLeast: 1}}
+var DefaultTargetValidators = []gateshv1alpha1.GateTargetValidator{{AtLeast: gateshv1alpha1.GateTargetValidatorAtLeast{Count: 1, Percent: 0}}}
 var DefaultOperation = gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd}
 var DefaultMatchConditionStatus = metav1.ConditionTrue
 

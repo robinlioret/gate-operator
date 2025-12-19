@@ -33,10 +33,14 @@ spec:
           matchExpression: {}
       # (Optional) Instruction on how to evaluate the target
       # By default, the gate will open if at least one resource was found regardless of its state
-      # Validators are "anded" together (see §Behavious and patterns of validators
+      # Validators are "anded" together (see §Behavious and patterns of validators)
       validators:
-        # (Optional) At least N objects must validate all the given conditions
-        - atLeast: 2
+        # (Optional) Minimal amount of valid objects to validate the target. By default, it a minimum of 1.
+        - atLeast:
+            # (Optional) At least N objects must validate all the given conditions
+            count: 1
+            # (Optional) At least X percent of the found object must validate the other validators (if there are ones)
+            percent: 50
         # (Optional) Check if the object has the right condition in its status.conditions
         - matchCondition:
             # (Required) Condition type in CamelCase
@@ -45,6 +49,12 @@ spec:
             # (Optional) default to "True" (with quotes, it's a string)
             # The value of the condition "True", or "False"
             status: "True"
+        # (Optional) Check if the field designed by the json pointer matches the given value
+        - jsonPointer:
+            # (Required) The JSON pointer (see https://gregsdennis.github.io/Manatee.Json/usage/pointer.html)
+            pointer: /status/state
+            # (Required) Value the JSON pointer must have to validate the validator
+            value: Opened
   # (Optional) Operation to perform to reduce the targets to a single boolean
   # By default, the targets are "anded"
   operation:
@@ -92,4 +102,4 @@ Per example: all the pod matching the label "app" = "my-app" has a Ready conditi
 
 3. Two or more validator(s) with atLeast
 
-The gate will open if atLeast N objects fulfill the other validators.
+The gate will open if atLeast N (or X%) objects fulfill the other validators.

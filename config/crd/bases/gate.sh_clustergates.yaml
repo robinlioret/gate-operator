@@ -154,10 +154,17 @@ spec:
                           // +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) + (has(self.jsonPointer) ? 1 : 0) == 1",message="The validator must have exactly one key."
                         properties:
                           atLeast:
-                            description: |-
-                              Validate the target if at least N objects matches other validator. If no validator are provided, will check if
-                              at least N object was found. If not specified alongside other validator, all found objects must match them.
-                            type: integer
+                            description: Validate the target if at least a certain
+                              amount of objects is found and matches the other validators
+                              if there are ones.
+                            properties:
+                              count:
+                                description: An absolute minimum
+                                type: integer
+                              percent:
+                                description: A percentage of the found objects
+                                type: integer
+                            type: object
                           jsonPointer:
                             description: JSON pointer to a field
                             properties:
