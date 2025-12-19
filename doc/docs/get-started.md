@@ -11,7 +11,7 @@ You'll need to have a valid installation of [Cert-Manager](https://cert-manager.
 Run the following command: 
 
 ```shell
-kubectl apply -f https://github.com/robinlioret/gate-operator/releases/download/v0.0.3/install.yaml
+kubectl apply -f https://github.com/robinlioret/gate-operator/releases/download/v0.0.4/install.yaml
 ```
 
 ### Using the Helm chart
