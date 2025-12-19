@@ -40,7 +40,8 @@ spec:
           matchLabels:
             deployment-stage: stage-x
       validators:
-        - atLeast: 3
+        - atLeast:
+            count: 3
         - matchCondition:
             type: Opened
 ```

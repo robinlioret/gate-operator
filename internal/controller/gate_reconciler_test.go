@@ -846,7 +846,7 @@ var _ = Describe("GateCommonReconciler", func() {
 			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("invalid label selector"))
 		})
 
-		It("should handle target with atLeast", func() {
+		It("should handle target with atLeast with an absolute count requirements", func() {
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
@@ -863,7 +863,96 @@ var _ = Describe("GateCommonReconciler", func() {
 							},
 							Validators: []gateshv1alpha1.GateTargetValidator{
 								{
-									AtLeast: 1,
+									AtLeast: gateshv1alpha1.GateTargetValidatorAtLeast{Count: 1},
+									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
+										Type:   "Ready",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			pod1 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod1",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "True",
+							},
+						},
+					},
+				},
+			}
+
+			pod2 := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "pod2",
+						"namespace": "default",
+						"labels": map[string]interface{}{
+							"app": "test",
+						},
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":   "Ready",
+								"status": "False",
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gate, pod1, pod2).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+			Expect(gate.Status.TargetConditions[0].Status).To(Equal(metav1.ConditionTrue))
+			Expect(gate.Status.TargetConditions[0].Message).To(ContainSubstring("1/1 valid objects")) // atLeast=1 in message, but result ignores it
+		})
+
+		It("should handle target with atLeast with an percent count requirements", func() {
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					RequeueAfter: &metav1.Duration{Duration: 5 * time.Minute},
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "target-pods",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion: "v1",
+								Kind:       "Pod",
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"app": "test"},
+								},
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{
+									AtLeast: gateshv1alpha1.GateTargetValidatorAtLeast{Percent: 50},
 									MatchCondition: gateshv1alpha1.GateTargetValidatorMatchCondition{
 										Type:   "Ready",
 										Status: metav1.ConditionTrue,

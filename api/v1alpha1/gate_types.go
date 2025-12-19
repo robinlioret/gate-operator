@@ -70,6 +70,17 @@ type GateTargetSelector struct {
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty,omitzero"`
 }
 
+// GateTargetValidatorAtLeast defines how many/much of the target pool is needed to open the gate
+type GateTargetValidatorAtLeast struct {
+	// An absolute minimum
+	// +optional
+	Count int `json:"count,omitempty"`
+
+	// A percentage of the found objects
+	// +optional
+	Percent int `json:"percent,omitempty"`
+}
+
 // GateTargetValidatorMatchCondition defines what condition is desired on the target objects.
 type GateTargetValidatorMatchCondition struct {
 	// Type of the kubernetes conditions.
@@ -93,10 +104,9 @@ type GateTargetValidatorJsonPointer struct {
 // GateTargetValidator defines a part of the logic to evaluate the target.
 // // +kubebuilder:validation:XValidation:rule="(has(self.atLeast) ? 1 : 0) + (has(self.matchCondition) ? 1 : 0) + (has(self.jsonPointer) ? 1 : 0) == 1",message="The validator must have exactly one key."
 type GateTargetValidator struct {
-	// Validate the target if at least N objects matches other validator. If no validator are provided, will check if
-	// at least N object was found. If not specified alongside other validator, all found objects must match them.
+	// Validate the target if at least a certain amount of objects is found and matches the other validators if there are ones.
 	// +optional
-	AtLeast int `json:"atLeast,omitempty,omitzero"`
+	AtLeast GateTargetValidatorAtLeast `json:"atLeast,omitempty,omitzero"`
 
 	// Desired condition of the resources.
 	// +optional
