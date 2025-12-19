@@ -36,7 +36,6 @@ func (g *GateCommonReconciler) Reconcile() error {
 	log.Info(fmt.Sprintf("Start reconciling %s %s", g.Gate.Kind, g.Gate.Name))
 	result, targetConditions := g.EvaluateSpec()
 	g.UpdateGateStatusFromResult(result, targetConditions)
-	g.Gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(g.Gate.Spec.RequeueAfter.Duration)}
 	return nil
 }
 
@@ -54,12 +53,22 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 	var closedCondition metav1.ConditionStatus
 
 	if result {
-		g.Gate.Status.State = gateshv1alpha1.GateStateOpened
-		message = "Gate was evaluated to true"
-		reason = "GateConditionMet"
-		openedCondition = metav1.ConditionTrue
-		closedCondition = metav1.ConditionFalse
+		g.Gate.Status.ConsecutiveValidEvaluations += 1
+		if g.Gate.Status.ConsecutiveValidEvaluations >= g.Gate.Spec.Consolidation.Count {
+			g.Gate.Status.State = gateshv1alpha1.GateStateOpened
+			message = "Gate was evaluated to true"
+			reason = "GateConditionMet"
+			openedCondition = metav1.ConditionTrue
+			closedCondition = metav1.ConditionFalse
+		} else {
+			g.Gate.Status.State = gateshv1alpha1.GateStateClosed
+			message = fmt.Sprintf("requires %d/%d consecutive valid evaluations to open", g.Gate.Status.ConsecutiveValidEvaluations, g.Gate.Spec.Consolidation.Count)
+			reason = "NotEnoughConsecutiveValidEvaluations"
+			openedCondition = metav1.ConditionFalse
+			closedCondition = metav1.ConditionTrue
+		}
 	} else {
+		g.Gate.Status.ConsecutiveValidEvaluations = 0
 		g.Gate.Status.State = gateshv1alpha1.GateStateClosed
 		message = "Gate was evaluated to false"
 		reason = "GateConditionNotMet"
@@ -70,6 +79,8 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateOpened, Status: openedCondition, Reason: reason, Message: message})
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateClosed, Status: closedCondition, Reason: reason, Message: message})
 	g.Gate.Status.TargetConditions = targetConditions
+
+	g.Gate.Status.NextEvaluation = metav1.Time{Time: time.Now().Add(g.Gate.Spec.RequeueAfter.Duration)}
 }
 
 func (g *GateCommonReconciler) EvaluateSpec() (bool, []metav1.Condition) {

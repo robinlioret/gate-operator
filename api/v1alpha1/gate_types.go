@@ -135,6 +135,16 @@ type GateTarget struct {
 	Validators []GateTargetValidator `json:"validators,omitempty,omitzero"`
 }
 
+// GateConsolidation defines the number of consecutive valid evaluation to consider the gate opened.
+type GateConsolidation struct {
+	// Number of consecutive checks to consider the gate opened.
+	Count int `json:"count,omitempty"`
+
+	// Delay between two checks. By default, it's 10s.
+	// +optional
+	Delay *metav1.Duration `json:"delay,omitempty"`
+}
+
 // GateSpec defines the desired state of Gate
 type GateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -154,6 +164,10 @@ type GateSpec struct {
 	// Defines the duration between evaluations of a Gate. By default, 60 seconds
 	// +optional
 	RequeueAfter *metav1.Duration `json:"requeueAfter,omitempty"`
+
+	// Defines the consolidation policy of a Gate. By default, at least 1 valid evaluation.
+	// +optional
+	Consolidation GateConsolidation `json:"consolidation,omitempty"`
 }
 
 // GateStatus defines the observed state of Gate.
@@ -189,6 +203,10 @@ type GateStatus struct {
 	// Easy access field representing the gate's condition
 	// +optional
 	State string `json:"state,omitempty"`
+
+	// Current consecutive valid checks
+	// +optional
+	ConsecutiveValidEvaluations int `json:"consecutiveValidEvaluations,omitempty"`
 }
 
 // +kubebuilder:object:root=true

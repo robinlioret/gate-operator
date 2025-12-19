@@ -50,4 +50,7 @@ func ApplyDefaultSpec(spec *gateshv1alpha1.GateSpec) {
 			}
 		}
 	}
+	if spec.Consolidation.Count == 0 {
+		spec.Consolidation.Count = 1
+	}
 }
