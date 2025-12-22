@@ -54,7 +54,12 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 	var closedCondition metav1.ConditionStatus
 
 	if result {
+		if g.Gate.Status.ConsecutiveValidEvaluations < g.Gate.Spec.Consolidation.Count {
+			g.Gate.Status.ConsecutiveValidEvaluations += 1
+		}
+
 		if g.Gate.Status.ConsecutiveValidEvaluations >= g.Gate.Spec.Consolidation.Count {
+			g.Gate.Status.ConsecutiveValidEvaluations = g.Gate.Spec.Consolidation.Count
 			g.RequeueAfter = g.Gate.Spec.Consolidation.Delay.Duration
 			g.Gate.Status.State = gateshv1alpha1.GateStateOpened
 			message = "Gate was evaluated to true"
@@ -62,7 +67,6 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 			openedCondition = metav1.ConditionTrue
 			closedCondition = metav1.ConditionFalse
 		} else {
-			g.Gate.Status.ConsecutiveValidEvaluations += 1
 			g.RequeueAfter = g.Gate.Spec.EvaluationPeriod.Duration
 			g.Gate.Status.State = gateshv1alpha1.GateStateClosed
 			message = fmt.Sprintf("requires %d/%d consecutive valid evaluations to open", g.Gate.Status.ConsecutiveValidEvaluations, g.Gate.Spec.Consolidation.Count)
