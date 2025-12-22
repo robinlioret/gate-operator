@@ -52,6 +52,8 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 	var reason string
 	var openedCondition metav1.ConditionStatus
 	var closedCondition metav1.ConditionStatus
+	var requeAfter time.Duration
+	var state gateshv1alpha1.GateState
 
 	if result {
 		if g.Gate.Status.ConsecutiveValidEvaluations < g.Gate.Spec.Consolidation.Count {
@@ -60,15 +62,15 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 
 		if g.Gate.Status.ConsecutiveValidEvaluations >= g.Gate.Spec.Consolidation.Count {
 			g.Gate.Status.ConsecutiveValidEvaluations = g.Gate.Spec.Consolidation.Count
-			g.RequeueAfter = g.Gate.Spec.Consolidation.Delay.Duration
-			g.Gate.Status.State = gateshv1alpha1.GateStateOpened
+			requeAfter = g.Gate.Spec.EvaluationPeriod.Duration
+			state = gateshv1alpha1.GateStateOpened
 			message = "Gate was evaluated to true"
 			reason = "GateConditionMet"
 			openedCondition = metav1.ConditionTrue
 			closedCondition = metav1.ConditionFalse
 		} else {
-			g.RequeueAfter = g.Gate.Spec.EvaluationPeriod.Duration
-			g.Gate.Status.State = gateshv1alpha1.GateStateClosed
+			requeAfter = g.Gate.Spec.Consolidation.Delay.Duration
+			state = gateshv1alpha1.GateStateClosed
 			message = fmt.Sprintf("requires %d/%d consecutive valid evaluations to open", g.Gate.Status.ConsecutiveValidEvaluations, g.Gate.Spec.Consolidation.Count)
 			reason = "NotEnoughConsecutiveValidEvaluations"
 			openedCondition = metav1.ConditionFalse
@@ -76,8 +78,8 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 		}
 	} else {
 		g.Gate.Status.ConsecutiveValidEvaluations = 0
-		g.RequeueAfter = g.Gate.Spec.Consolidation.Delay.Duration
-		g.Gate.Status.State = gateshv1alpha1.GateStateClosed
+		requeAfter = g.Gate.Spec.Consolidation.Delay.Duration
+		state = gateshv1alpha1.GateStateClosed
 		message = "Gate was evaluated to false"
 		reason = "GateConditionNotMet"
 		openedCondition = metav1.ConditionFalse
@@ -87,6 +89,8 @@ func (g *GateCommonReconciler) UpdateGateStatusFromResult(
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateOpened, Status: openedCondition, Reason: reason, Message: message})
 	meta.SetStatusCondition(&g.Gate.Status.Conditions, metav1.Condition{Type: gateshv1alpha1.GateStateClosed, Status: closedCondition, Reason: reason, Message: message})
 	g.Gate.Status.TargetConditions = targetConditions
+	g.RequeueAfter = requeAfter
+	g.Gate.Status.State = state
 }
 
 func (g *GateCommonReconciler) EvaluateSpec() (bool, []metav1.Condition) {

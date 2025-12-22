@@ -1039,11 +1039,12 @@ var _ = Describe("GateCommonReconciler", func() {
 		})
 
 		It("should keep the gate closed even if conditions are met but need multiple consecutive checks", func() {
+			By("creating agate and some objects")
 			gate := &gateshv1alpha1.Gate{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-gate", Namespace: "default"},
 				Spec: gateshv1alpha1.GateSpec{
 					EvaluationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
-					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 3, Delay: &metav1.Duration{Duration: time.Second}},
+					Consolidation:    gateshv1alpha1.GateConsolidation{Count: 3, Delay: &metav1.Duration{Duration: time.Hour}},
 					Targets: []gateshv1alpha1.GateTarget{
 						{
 							Name: "target-pod",
@@ -1092,24 +1093,27 @@ var _ = Describe("GateCommonReconciler", func() {
 				Gate:    gate,
 			}
 
-			err := reconciler.Reconcile()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
-			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionFalse))
-			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionTrue))
-			Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(1))
+			for i := range 2 {
+				By("reconciling the gate but keeping the gate closed even if conditions are met")
+				err := reconciler.Reconcile()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
+				Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionFalse))
+				Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionTrue))
+				Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(i + 1))
+				Expect(reconciler.RequeueAfter).To(Equal(time.Hour))
+			}
 
-			err = reconciler.Reconcile()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateClosed))
-			Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(2))
-
-			err = reconciler.Reconcile()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
-			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionTrue))
-			Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionFalse))
-			Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(3))
+			for range 4 {
+				By("reconciling the gate and opening it without abusively incrementing the count")
+				err := reconciler.Reconcile()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gate.Status.State).To(Equal(gateshv1alpha1.GateStateOpened))
+				Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateOpened).Status).To(Equal(metav1.ConditionTrue))
+				Expect(meta.FindStatusCondition(gate.Status.Conditions, gateshv1alpha1.GateStateClosed).Status).To(Equal(metav1.ConditionFalse))
+				Expect(gate.Status.ConsecutiveValidEvaluations).To(Equal(3))
+				Expect(reconciler.RequeueAfter).To(Equal(5 * time.Minute))
+			}
 		})
 	})
 
