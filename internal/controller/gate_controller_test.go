@@ -80,8 +80,9 @@ var _ = Describe("Gate Controller", func() {
 					},
 				},
 			},
-			Operation:    gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
-			RequeueAfter: &metav1.Duration{Duration: 10 * time.Second},
+			Operation:        gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd},
+			EvaluationPeriod: &metav1.Duration{Duration: 10 * time.Second},
+			Consolidation:    gateshv1alpha1.GateConsolidation{Count: 1, Delay: &metav1.Duration{Duration: time.Second}},
 		},
 	}
 	cm1 := &corev1.ConfigMap{

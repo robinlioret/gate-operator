@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: gate-sample-2
 spec:
-  requeueAfter: 60s
+  evaluationPeriod: 60s
   targets:
     - name: K8sAppDns
       selector:
@@ -26,6 +26,7 @@ spec:
         kind: Deployment
         name: "not-found"
       validators:
-        - atLeast: 1
+        - atLeast:
+            count: 1
   operation:
     operator: Or

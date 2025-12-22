@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: gate-sample-1
 spec:
-  requeueAfter: 60s
+  evaluationPeriod: 60s
   targets:
     - name: CoreDns
       selector:
@@ -15,4 +15,5 @@ spec:
         name: coredns
         namespace: kube-system
       validators:
-        - atLeast: 1
+        - atLeast:
+            count: 1

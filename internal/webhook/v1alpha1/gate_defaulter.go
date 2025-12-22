@@ -25,13 +25,21 @@ import (
 )
 
 var DefaultRequeueAfter = &metav1.Duration{Duration: 60 * time.Second}
+var DefaultConsolidationDelay = &metav1.Duration{Duration: 5 * time.Second}
+var DefaultConsolidationCount = 1
 var DefaultTargetValidators = []gateshv1alpha1.GateTargetValidator{{AtLeast: gateshv1alpha1.GateTargetValidatorAtLeast{Count: 1, Percent: 0}}}
 var DefaultOperation = gateshv1alpha1.GateOperation{Operator: gateshv1alpha1.GateOperatorAnd}
 var DefaultMatchConditionStatus = metav1.ConditionTrue
 
 func ApplyDefaultSpec(spec *gateshv1alpha1.GateSpec) {
-	if spec.RequeueAfter == nil {
-		spec.RequeueAfter = DefaultRequeueAfter
+	if spec.EvaluationPeriod == nil {
+		spec.EvaluationPeriod = DefaultRequeueAfter
+	}
+	if spec.Consolidation.Count == 0 {
+		spec.Consolidation.Count = DefaultConsolidationCount
+	}
+	if spec.Consolidation.Delay == nil {
+		spec.Consolidation.Delay = DefaultConsolidationDelay
 	}
 	if spec.Operation.Operator == "" {
 		spec.Operation = DefaultOperation
@@ -49,8 +57,5 @@ func ApplyDefaultSpec(spec *gateshv1alpha1.GateSpec) {
 				}
 			}
 		}
-	}
-	if spec.Consolidation.Count == 0 {
-		spec.Consolidation.Count = 1
 	}
 }

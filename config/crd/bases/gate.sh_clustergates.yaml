@@ -55,6 +55,10 @@ spec:
                     description: Delay between two checks. By default, it's 10s.
                     type: string
                 type: object
+              evaluationPeriod:
+                description: Defines the duration between evaluations of a Gate. By
+                  default, 60 seconds
+                type: string
               operation:
                 description: Indicates how to combine the targets results. By default,
                   they will simply be anded.
@@ -72,10 +76,6 @@ spec:
                 required:
                 - operator
                 type: object
-              requeueAfter:
-                description: Defines the duration between evaluations of a Gate. By
-                  default, 60 seconds
-                type: string
               targets:
                 description: The set of conditions to make the Gate ready.
                 items:
@@ -288,11 +288,6 @@ spec:
               consecutiveValidEvaluations:
                 description: Current consecutive valid checks
                 type: integer
-              nextEvaluation:
-                description: lastSuccessfulEvaluation defines when was the last time
-                  the gate was successfully evaluated.
-                format: date-time
-                type: string
               state:
                 description: Easy access field representing the gate's condition
                 type: string
