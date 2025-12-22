@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-openapi/jsonpointer"
 	gateshv1alpha1 "github.com/robinlioret/gate-operator/api/v1alpha1"
+	"github.com/robinlioret/gate-operator/internal/webhook/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,7 @@ type TargetObjectResult struct {
 func (g *GateCommonReconciler) Reconcile() error {
 	log := logf.FromContext(g.Context)
 	log.Info(fmt.Sprintf("Start reconciling %s %s", g.Gate.Kind, g.Gate.Name))
+	v1alpha1.ApplyDefaultSpec(&g.Gate.Spec)
 	result, targetConditions := g.EvaluateSpec()
 	g.UpdateGateStatusFromResult(result, targetConditions)
 	return nil

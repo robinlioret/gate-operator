@@ -1516,4 +1516,54 @@ var _ = Describe("GateCommonReconciler", func() {
 			Expect(result).To(BeFalse())
 		})
 	})
+
+	Describe("NilPointerExceptions", func() {
+		It("should not raise a null pointer exception", func() {
+			By("creating the simpliest gate")
+			gate := &gateshv1alpha1.Gate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Spec: gateshv1alpha1.GateSpec{
+					Targets: []gateshv1alpha1.GateTarget{
+						{
+							Name: "Pods",
+							Selector: gateshv1alpha1.GateTargetSelector{
+								ApiVersion:    "v1",
+								Kind:          "Pod",
+								LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test"}},
+							},
+							Validators: []gateshv1alpha1.GateTargetValidator{
+								{AtLeast: gateshv1alpha1.GateTargetValidatorAtLeast{Count: 1, Percent: 100}},
+								{JsonPointer: gateshv1alpha1.GateTargetValidatorJsonPointer{Pointer: "/metadata/name", Value: "test"}},
+							},
+						},
+					},
+				},
+			}
+
+			pod := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":      "test",
+						"namespace": "default",
+						"labels": map[string]string{
+							"app": "test",
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(pod).Build()
+
+			reconciler := GateCommonReconciler{
+				Context: ctx,
+				Client:  cl,
+				Gate:    gate,
+			}
+
+			err := reconciler.Reconcile()
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 })
