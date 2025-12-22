@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var DefaultRequeueAfter = &metav1.Duration{Duration: 60 * time.Second}
+var DefaultEvaluationPeriod = &metav1.Duration{Duration: 60 * time.Second}
 var DefaultConsolidationDelay = &metav1.Duration{Duration: 5 * time.Second}
 var DefaultConsolidationCount = 1
 var DefaultTargetValidators = []gateshv1alpha1.GateTargetValidator{{AtLeast: gateshv1alpha1.GateTargetValidatorAtLeast{Count: 1, Percent: 0}}}
@@ -33,7 +33,7 @@ var DefaultMatchConditionStatus = metav1.ConditionTrue
 
 func ApplyDefaultSpec(spec *gateshv1alpha1.GateSpec) {
 	if spec.EvaluationPeriod == nil {
-		spec.EvaluationPeriod = DefaultRequeueAfter
+		spec.EvaluationPeriod = DefaultEvaluationPeriod
 	}
 	if spec.Consolidation.Count == 0 {
 		spec.Consolidation.Count = DefaultConsolidationCount
