@@ -63,10 +63,9 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	gcr := GateCommonReconciler{
-		Context:      ctx,
-		Client:       r.Client,
-		Gate:         &gate,
-		RequeueAfter: gate.Spec.EvaluationPeriod.Duration,
+		Context: ctx,
+		Client:  r.Client,
+		Gate:    &gate,
 	}
 	err = gcr.Reconcile()
 	if err != nil {
