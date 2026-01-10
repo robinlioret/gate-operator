@@ -4,7 +4,7 @@ go 1.25.3
 
 require (
 	github.com/go-openapi/jsonpointer v0.22.4
-	github.com/onsi/ginkgo/v2 v2.27.3
+	github.com/onsi/ginkgo/v2 v2.27.4
 	github.com/onsi/gomega v1.39.0
 	k8s.io/api v0.34.3
 	k8s.io/apimachinery v0.35.0
